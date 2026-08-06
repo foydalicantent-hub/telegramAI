@@ -1,4 +1,4 @@
-import { PREMIUM_DURATION_DAYS } from "../constants.js";
+import { PREMIUM_DURATION_DAYS } from "./constants.js";
 
 /**
  * Direct bypass: always allows AI requests without daily limits.
