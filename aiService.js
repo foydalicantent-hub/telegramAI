@@ -1,8 +1,8 @@
 import axios from "axios";
 
-import { config } from "../config/env.js";
-import { AI_MODELS } from "../config/constants.js";
-import { logger } from "../utils/logger.js";
+import { config } from "../env.js";
+import { AI_MODELS } from "../constants.js";
+import { logger } from "../logger.js";
 
 const LANGUAGE_NAMES = {
   uz: "Uzbek",
