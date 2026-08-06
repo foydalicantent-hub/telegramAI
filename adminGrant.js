@@ -1,7 +1,7 @@
-import { User } from "../models/User.js";
-import { grantPremium } from "../services/premiumService.js";
-import { config } from "../config/env.js";
-import { PREMIUM_DURATION_DAYS } from "../config/constants.js";
+import { User } from "./User.js";
+import { grantPremium } from "./premiumService.js";
+import { config } from "./env.js";
+import { PREMIUM_DURATION_DAYS } from "./constants.js";
 
 /**
  * Admin-only utility: /grant <telegramId> [days]
