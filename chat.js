@@ -1,13 +1,13 @@
-import { Memory } from "../models/Memory.js";
-import { getOrCreateUser } from "../services/userService.js";
-import { ensureLanguage } from "../models/User.js";
-import { queryAI } from "../services/aiService.js";
-import { searchMovie } from "../services/movieService.js";
-import { webSearch } from "../services/searchService.js";
-import { downloadMedia, isSocialMediaUrl } from "../services/downloaderService.js";
-import { MEMORY_HISTORY_LIMIT } from "../config/constants.js";
-import { logger } from "../utils/logger.js";
-import { mainMenuKeyboard } from "../keyboards/mainMenu.js";
+import { Memory } from "../Memory.js";
+import { getOrCreateUser } from "../userService.js";
+import { ensureLanguage } from "../User.js";
+import { queryAI } from "../aiService.js";
+import { searchMovie } from "../movieService.js";
+import { webSearch } from "../searchService.js";
+import { downloadMedia, isSocialMediaUrl } from "../downloaderService.js";
+import { MEMORY_HISTORY_LIMIT } from "../constants.js";
+import { logger } from "../logger.js";
+import { mainMenuKeyboard } from "../mainMenu.js";
 import fetch from "node-fetch";
 
 export async function chatHandler(ctx) {
