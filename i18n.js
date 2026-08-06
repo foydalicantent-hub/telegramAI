@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { LANGUAGES, DEFAULT_LANGUAGE } from "../config/constants.js";
+import { LANGUAGES, DEFAULT_LANGUAGE } from "./constants.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
