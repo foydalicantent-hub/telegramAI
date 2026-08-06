@@ -1,7 +1,7 @@
-import { getOrCreateUser } from "../userService.js";
-import { ensureLanguage, refreshPremiumStatus } from "../User.js";
-import { getUsageSummary } from "../premiumService.js";
-import { FREE_DAILY_LIMIT } from "../constants.js";
+import { getOrCreateUser } from "./userService.js";
+import { ensureLanguage, refreshPremiumStatus } from "./User.js";
+import { getUsageSummary } from "./premiumService.js";
+import { FREE_DAILY_LIMIT } from "./constants.js";
 import { t } from "../i18n.js";
 
 export async function premiumCommand(ctx) {
