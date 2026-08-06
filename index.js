@@ -1,4 +1,5 @@
 import { Bot } from "grammy";
+import http from "http";
 
 import { config, assertRequiredConfig } from "./env.js";
 import { connectDB } from "./connect.js";
@@ -22,6 +23,17 @@ assertRequiredConfig();
 await connectDB();
 
 const bot = new Bot(config.botToken);
+
+// Render port xatoligini oldini olish uchun kichik HTTP server
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Bot is running!");
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  logger.info(`HTTP server is listening on port ${PORT}`);
+});
 
 await bot.api.setMyCommands([
   { command: "start", description: "Botni ishga tushirish" },
@@ -188,7 +200,6 @@ QOIDALAR:
 
     const aiAnswer = await queryAI(promptMessages, lang);
     
-    // Avval siz yozgan matn (baseInstruction), keyin AI javobi birlashtiriladi
     let finalReply = "";
     if (baseInstruction) {
       finalReply = `${baseInstruction}\n\n${aiAnswer || ""}`.trim();
