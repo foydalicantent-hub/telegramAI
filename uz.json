@@ -1,0 +1,36 @@
+{
+  "welcome": "Salom, {{name}}! 👋 Men sizning AI yordamchingizman 🤖\n\nBuyruqlar ro'yxati uchun /help ni bosing.",
+  "choose_language": "🌐 Tilni tanlang:",
+  "language_changed": "✅ Til O'zbekcha qilib saqlandi 🇺🇿",
+
+  "help_title": "🤖 <b>Bot imkoniyatlari</b>",
+  "help_body": "💬 <b>AI Chat</b> — istalgan savolingizni yozing, men javob beraman.\n🌐 <b>Internet qidiruv</b> — xabaringizda \"qidir\" yoki \"internet\" so'zini ishlating.\n🎬 <b>Kino qidiruv</b> — \"kino\" yoki \"movie\" so'zi bilan film nomini yozing.\n\n<b>Buyruqlar:</b>\n/start — botni ishga tushirish va til tanlash\n/help — shu yordam matni\n/clean — suhbat xotirasini tozalash\n/tarix — so'nggi suhbatlar tarixi\n/muammo — admin'ga muammo yoki taklif yuborish\n/premium — Premium haqida ma'lumot",
+
+  "clean_done": "🗑 Suhbat xotirangiz tozalandi.",
+
+  "history_empty": "📭 Hozircha suhbat tarixi yo'q.",
+  "history_title": "🕓 <b>So'nggi suhbatlar:</b>",
+
+  "muammo_prompt": "✍️ Muammo yoki taklifingizni yozing. Xabaringiz to'g'ridan-to'g'ri administratorga yuboriladi.",
+  "muammo_sent": "✅ Xabaringiz adminga yuborildi. Rahmat!",
+  "muammo_error": "❌ Xabarni yuborib bo'lmadi, keyinroq urinib ko'ring.",
+
+  "premium_status_free": "📄 Holatingiz: <b>Free</b>\nKunlik limit: {{used}}/{{limit}} so'rov ishlatildi.",
+  "premium_status_premium": "⭐ Holatingiz: <b>Premium</b>\nAmal qilish muddati: {{expires}} gacha\nCheklovsiz foydalanish 🎉",
+  "premium_info": "⭐ <b>Premium imkoniyatlari</b>\n\n✅ Cheklovsiz AI so'rovlar\n✅ 30 kunlik muddat\n✅ Tezkor javoblar\n\nBepul foydalanuvchilar kuniga {{limit}} ta so'rov yubora oladi.\n\nPremium sotib olish uchun administrator bilan bog'laning.",
+
+  "limit_reached": "🚫 Kunlik bepul limit ({{limit}} ta so'rov) tugadi.\n\nCheklovsiz foydalanish uchun /premium buyrug'ini bosing ⭐",
+
+  "ai_thinking": "⏳",
+  "ai_empty_answer": "❌ Javob topilmadi, qaytadan urinib ko'ring.",
+  "generic_error": "❌ Xatolik yuz berdi. Keyinroq urinib ko'ring.",
+
+  "search_running": "🔎 Qidirilmoqda...",
+  "search_not_found": "❌ Hech narsa topilmadi.",
+  "search_unavailable": "❌ Qidiruv hozircha ishlamayapti.",
+  "search_results_title": "🌐 Topilgan natijalar:",
+
+  "movie_running": "🎬 Film qidirilmoqda...",
+  "movie_not_found": "❌ Bunday film topilmadi.",
+  "movie_unavailable": "❌ Kino qidiruvi hozircha ishlamayapti."
+}

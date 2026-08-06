@@ -1,0 +1,36 @@
+{
+  "welcome": "Hello, {{name}}! 👋 I'm your AI assistant 🤖\n\nTap /help to see what I can do.",
+  "choose_language": "🌐 Choose a language:",
+  "language_changed": "✅ Language set to English 🇺🇸",
+
+  "help_title": "🤖 <b>Bot features</b>",
+  "help_body": "💬 <b>AI Chat</b> — just type any question and I'll answer.\n🌐 <b>Web search</b> — include the word \"search\" or \"internet\" in your message.\n🎬 <b>Movie search</b> — write \"movie\" followed by the title.\n\n<b>Commands:</b>\n/start — start the bot and choose language\n/help — show this help message\n/clean — clear your chat history\n/tarix — show your recent conversation history\n/muammo — send feedback or report a problem to the admin\n/premium — Premium plan info",
+
+  "clean_done": "🗑 Your chat history has been cleared.",
+
+  "history_empty": "📭 You don't have any conversation history yet.",
+  "history_title": "🕓 <b>Recent conversation:</b>",
+
+  "muammo_prompt": "✍️ Write your problem or suggestion. Your message will be forwarded directly to the admin.",
+  "muammo_sent": "✅ Your message was sent to the admin. Thank you!",
+  "muammo_error": "❌ Couldn't send your message, please try again later.",
+
+  "premium_status_free": "📄 Status: <b>Free</b>\nDaily limit used: {{used}}/{{limit}} requests.",
+  "premium_status_premium": "⭐ Status: <b>Premium</b>\nActive until: {{expires}}\nUnlimited usage 🎉",
+  "premium_info": "⭐ <b>Premium benefits</b>\n\n✅ Unlimited AI requests\n✅ 30-day access\n✅ Priority replies\n\nFree users get {{limit}} requests per day.\n\nContact the admin to purchase Premium.",
+
+  "limit_reached": "🚫 You've reached today's free limit ({{limit}} requests).\n\nTap /premium to unlock unlimited usage ⭐",
+
+  "ai_thinking": "⏳",
+  "ai_empty_answer": "❌ No answer found, please try again.",
+  "generic_error": "❌ Something went wrong. Please try again later.",
+
+  "search_running": "🔎 Searching...",
+  "search_not_found": "❌ Nothing found.",
+  "search_unavailable": "❌ Search is temporarily unavailable.",
+  "search_results_title": "🌐 Search results:",
+
+  "movie_running": "🎬 Searching for the movie...",
+  "movie_not_found": "❌ No movie found with that title.",
+  "movie_unavailable": "❌ Movie search is temporarily unavailable."
+}

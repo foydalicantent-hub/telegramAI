@@ -1,0 +1,26 @@
+{
+  "name": "telegram-ai-bot",
+  "version": "2.0.0",
+  "description": "Lightweight multilingual Telegram AI Bot (chat, web search, movie search, premium)",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@distube/ytdl-core": "^4.16.12",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "axios": "^1.19.0",
+    "dotenv": "^16.6.1",
+    "fluent-ffmpeg": "^2.1.3",
+    "grammy": "^1.45.1",
+    "instagram-url-direct": "^2.0.7",
+    "mongoose": "^8.9.3",
+    "node-fetch": "^3.3.2",
+    "yt-dlp-wrap": "^2.3.12"
+  }
+}

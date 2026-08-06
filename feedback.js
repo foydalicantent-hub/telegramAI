@@ -1,0 +1,13 @@
+import { getOrCreateUser } from "../services/userService.js";
+import { ensureLanguage } from "../models/User.js";
+import { t } from "../utils/i18n.js";
+
+export async function muammoCommand(ctx) {
+  const user = await getOrCreateUser(ctx);
+  const lang = ensureLanguage(user);
+
+  user.awaitingFeedback = true;
+  await user.save();
+
+  await ctx.reply(t(lang, "muammo_prompt"));
+}
