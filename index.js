@@ -84,7 +84,7 @@ bot.hears("🟢 Avto-javobni yoqish", async (ctx) => {
     await user.save();
 
     await ctx.reply(
-      "✅ **Avto-javob yoqildi!**\n\nEndi oflayn paytingizda sizga yozgan mijozlarga belgilangan xabaringiz avtomatik yuboriladi.",
+      "✅ **Avto-javob yoqildi!**\n\nEndi oflayn paytingizda sizga yozgan yangi mijozlarga belgilangan xabaringiz faqat bir marta avtomatik yuboriladi.",
       { 
         parse_mode: "Markdown",
         reply_markup: {
@@ -102,7 +102,7 @@ bot.hears("🟢 Avto-javobni yoqish", async (ctx) => {
   }
 });
 
-// 🔴 AVTO-JAVOBNI O'CHIRISH TUGMASI
+// 🔴 AVTO-JAVOBni O'CHIRISH TUGMASI
 bot.hears("🔴 Avto-javobni o'chirish", async (ctx) => {
   try {
     const userId = ctx.from.id;
@@ -230,20 +230,20 @@ bot.on("business_connection", async (ctx) => {
   }
 });
 
-// Biznes xabarlarga javob berish (FAQAT SIZ YOZGAN MATN BORADI)
+// Biznes xabarlarga javob berish (FAQAT BIR MARTA JAVOB BERADI)
 bot.on("business_message", async (ctx) => {
   try {
     const message = ctx.businessMessage;
     const text = message.text;
+    const senderId = message.from ? message.from.id : null;
 
-    if (!text) return;
+    if (!text || !senderId) return;
 
     let owner = await User.findOne({ businessConnectionId: message.business_connection_id });
     if (!owner) {
       owner = await User.findOne({ businessConnectionId: { $exists: true, $ne: "" } }).sort({ updatedAt: -1 });
     }
 
-    // Agar avto-javob o'chirilgan bo'lsa yoki egasi o'zi yozgan bo'lsa - jim turadi
     if (!owner || owner.autoReplyActive === false) {
       return;
     }
@@ -252,11 +252,26 @@ bot.on("business_message", async (ctx) => {
       return;
     }
 
-    // FAQAT SIZ YOZGAN MATN (AI ishtirok etmaydi)
+  // Shu foydalanuvchiga bu seansda allaqachon javob berilganligini tekshiramiz
+    const existingMemory = await Memory.findOne({ 
+      telegramId: owner.telegramId, 
+      role: "assistant", 
+      content: { $regex: `\\[Mijoz ID: ${senderId}\\]` } 
+    });
+
+    if (existingMemory) {
+      // Agar avval javob berilgan bo'lsa, qayta yubormaymiz (jim turamiz)
+      return;
+    }
+
     const finalReply = owner.businessInstruction || "Men bandman soat 22:00 da yozing";
 
-    await Memory.create({ telegramId: owner.telegramId, role: "user", content: `[Mijoz]: ${text}` });
-    await Memory.create({ telegramId: owner.telegramId, role: "assistant", content: `[Avto-javob]: ${finalReply}` });
+    // Xotiraga saqlaymiz (Mijoz ID sini qo'shib, qayta yubormasligi uchun)
+    await Memory.create({ 
+      telegramId: owner.telegramId, 
+      role: "assistant", 
+      content: `[Mijoz ID: ${senderId}] [Avto-javob]: ${finalReply}` 
+    });
 
     await ctx.reply(finalReply, {
       business_connection_id: message.business_connection_id,
@@ -316,7 +331,7 @@ bot.on("message:text", async (ctx, next) => {
       await user.save();
 
       await ctx.reply(
-        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi oflayn paytingizda mijozlarga faqat shu matn yuboriladi.`,
+        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi oflayn paytingizda mijozlarga faqat bir marta shu matn yuboriladi.`,
         { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
       );
       return;
