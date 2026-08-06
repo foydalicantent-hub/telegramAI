@@ -3,7 +3,7 @@ const { default: YTDLPWrap } = pkg;
 import path from "path";
 import os from "os";
 import fs from "fs";
-import { logger } from "../utils/logger.js";
+import { logger } from "./logger.js";
 
 let ytDlpWrap;
 
