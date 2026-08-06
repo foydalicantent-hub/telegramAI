@@ -1,8 +1,8 @@
-import { getOrCreateUser } from "../services/userService.js";
-import { ensureLanguage, refreshPremiumStatus } from "../models/User.js";
-import { getUsageSummary } from "../services/premiumService.js";
-import { FREE_DAILY_LIMIT } from "../config/constants.js";
-import { t } from "../utils/i18n.js";
+import { getOrCreateUser } from "../userService.js";
+import { ensureLanguage, refreshPremiumStatus } from "../User.js";
+import { getUsageSummary } from "../premiumService.js";
+import { FREE_DAILY_LIMIT } from "../constants.js";
+import { t } from "../i18n.js";
 
 export async function premiumCommand(ctx) {
   const user = await getOrCreateUser(ctx);
