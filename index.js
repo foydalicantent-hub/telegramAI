@@ -64,15 +64,15 @@ bot.command("avto_telefon", async (ctx) => {
   await ctx.reply(
     "📱 **Avto-telefon va avto-javob sozlash bo'yicha ma'lumot:**\n\n" +
     "Bu bot orqali Telegram Business orqali kelgan xabarlarga avtomatik javob qaytarish va telefon raqam / lokatsiyangizni ulashish imkoniyati mavjud.\n\n" +
-    "Sozlash uchun menyudagi tugmalardan foydalaning.",
+    "Sozlash uchun quyidagi tugmalardan foydalaning.",
     { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
   );
 });
 
 bot.callbackQuery(/^lang_/, languageCallback);
 
-// 📞 AVTO-JAVOBNI YOQISH / O'CHIRISH TUGMASI
-bot.hears("🔄 Avto-javobni yoqish/o'chirish", async (ctx) => {
+// 🟢 AVTO-JAVOBNI YOQISH TUGMASI
+bot.hears("🟢 Avto-javobni yoqish", async (ctx) => {
   try {
     const userId = ctx.from.id;
     let user = await User.findOne({ telegramId: userId });
@@ -80,18 +80,62 @@ bot.hears("🔄 Avto-javobni yoqish/o'chirish", async (ctx) => {
     if (!user) {
       user = await User.create({ telegramId: userId, autoReplyActive: true });
     } else {
-      user.autoReplyActive = !user.autoReplyActive;
+      user.autoReplyActive = true;
     }
     await user.save();
 
-    const statusText = user.autoReplyActive ? "🟢 YOQILDI (Oflaynsiz, mijozlarga javob beradi)" : "🔴 O'CHIRILDI (Bot mijozlarga javob bermaydi)";
-    await ctx.reply(`Avto-javob holati o'zgartirildi:\n\n${statusText}`, { reply_markup: mainMenuKeyboard });
+    await ctx.reply(
+      "✅ **Avto-javob yoqildi!**\n\nEndi oflayn paytingizda sizga yozgan mijozlarga belgilangan xabaringiz avtomatik yuboriladi.",
+      { 
+        parse_mode: "Markdown",
+        reply_markup: {
+          keyboard: [
+            [{ text: "📞 Avto-javob sozlash (Kontakt yuborish)" }],
+            [{ text: "🔴 Avto-javobni o'chirish" }],
+            [{ text: "🔙 Asosiy menyu" }]
+          ],
+          resize_keyboard: true
+        }
+      }
+    );
   } catch (err) {
-    logger.error(`Auto reply toggle error: ${err.message}`);
+    logger.error(`Auto reply turn on error: ${err.message}`);
   }
 });
 
-// 📞 FAKAT TUGMA BOSILGANDagina KONTAKT SO'RASH
+// 🔴 AVTO-JAVOBNI O'CHIRISH TUGMASI
+bot.hears("🔴 Avto-javobni o'chirish", async (ctx) => {
+  try {
+    const userId = ctx.from.id;
+    let user = await User.findOne({ telegramId: userId });
+    
+    if (!user) {
+      user = await User.create({ telegramId: userId, autoReplyActive: false });
+    } else {
+      user.autoReplyActive = false;
+    }
+    await user.save();
+
+    await ctx.reply(
+      "❌ **Avto-javob o'chirildi!**\n\nEndi bot mijozlarga avtomatik javob bermaydi.",
+      { 
+        parse_mode: "Markdown",
+        reply_markup: {
+          keyboard: [
+            [{ text: "📞 Avto-javob sozlash (Kontakt yuborish)" }],
+            [{ text: "🟢 Avto-javobni yoqish" }],
+            [{ text: "🔙 Asosiy menyu" }]
+          ],
+          resize_keyboard: true
+        }
+      }
+    );
+  } catch (err) {
+    logger.error(`Auto reply turn off error: ${err.message}`);
+  }
+});
+
+// 📞 AVTO-JAVOB SOZLASH MENU
 bot.hears("📞 Avto-javob sozlash (Kontakt yuborish)", async (ctx) => {
   await ctx.reply(
     "📞 Telegram Business avto-javobni sozlash uchun iltimos, pastdagi **📞 Kontaktni ulashish** tugmasini bosing:",
@@ -99,7 +143,7 @@ bot.hears("📞 Avto-javob sozlash (Kontakt yuborish)", async (ctx) => {
       reply_markup: {
         keyboard: [
           [{ text: "📞 Kontaktni ulashish", request_contact: true }],
-          [{ text: "🔄 Avto-javobni yoqish/o'chirish" }],
+          [{ text: "🟢 Avto-javobni yoqish" }, { text: "🔴 Avto-javobni o'chirish" }],
           [{ text: "🔙 Asosiy menyu" }]
         ],
         resize_keyboard: true,
@@ -210,7 +254,7 @@ bot.on("business_message", async (ctx) => {
     }
 
     const lang = ensureLanguage(owner);
-    const baseInstruction = owner.businessInstruction ? owner.businessInstruction : "";
+    const baseInstruction = owner.businessInstruction ? owner.businessInstruction : "Men bandman soat 22:00 da yozing";
     const phoneText = owner.phoneNumber ? ` Telefon raqami: ${owner.phoneNumber}.` : "";
     const locationText = owner.businessLocation ? ` Turgan joyi: ${owner.businessLocation}.` : "";
 
@@ -234,7 +278,7 @@ QOIDALAR:
     if (baseInstruction) {
       finalReply = `${baseInstruction}\n\n${aiAnswer || ""}`.trim();
     } else {
-      finalReply = aiAnswer || "Salom! Sizga qanday bera olaman?";
+      finalReply = aiAnswer || "Salom! Sizga qanday yordam bera olaman?";
     }
 
     await Memory.create({ telegramId: owner.telegramId, role: "user", content: `[Mijoz]: ${text}` });
@@ -294,11 +338,11 @@ bot.on("message:text", async (ctx, next) => {
     if (user && user.waitingForInstruction) {
       user.businessInstruction = ctx.message.text;
       user.waitingForInstruction = false;
-      user.autoReplyActive = true; // Matn kiritilgach avto-javobni faollashtiramiz
+      user.autoReplyActive = true; 
       await user.save();
 
       await ctx.reply(
-        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi oflayn paytingizda mijozlarga shu matn yuboriladi.`,
+        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi oflayn paytingizda mijozlarga shu matn yuboriladi.`,
         { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
       );
       return;
