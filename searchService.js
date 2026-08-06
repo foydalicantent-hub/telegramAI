@@ -1,7 +1,7 @@
 import axios from "axios";
 
-import { config } from "../config/env.js";
-import { logger } from "../utils/logger.js";
+import { config } from "../env.js";
+import { logger } from "../logger.js";
 
 /**
  * Searches the web (via YouTube Data API) and returns a list of
