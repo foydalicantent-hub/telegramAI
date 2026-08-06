@@ -1,4 +1,4 @@
-import { User } from "../models/User.js";
+import { User } from "./User.js";
 
 /** Finds the user for this Telegram context, creating one on first contact. */
 export async function getOrCreateUser(ctx) {
