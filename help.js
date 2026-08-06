@@ -1,6 +1,6 @@
-import { getOrCreateUser } from "../services/userService.js";
-import { ensureLanguage } from "../models/User.js";
-import { t } from "../utils/i18n.js";
+import { getOrCreateUser } from "./userService.js";
+import { ensureLanguage } from "./User.js";
+import { t } from "./i18n.js";
 
 export async function helpCommand(ctx) {
   const user = await getOrCreateUser(ctx);
