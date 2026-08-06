@@ -1,7 +1,7 @@
 import axios from "axios";
 
-import { config } from "../env.js";
-import { logger } from "../logger.js";
+import { config } from "./env.js";
+import { logger } from "./logger.js";
 
 const MOVIE_KEYWORDS = ["kino", "film", "movie", "фильм", "кино"];
 
