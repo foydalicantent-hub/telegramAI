@@ -149,7 +149,7 @@ bot.on("business_connection", async (ctx) => {
   }
 });
 
-// Biznes xabarlarga javob berish
+// Biznes xabarlarga javob berish (Faqat o'zingiz kiritgan avto-javob matnini yuboradi)
 bot.on("business_message", async (ctx) => {
   try {
     const message = ctx.businessMessage;
@@ -166,35 +166,10 @@ bot.on("business_message", async (ctx) => {
       return;
     }
 
-    const lang = owner ? ensureLanguage(owner) : "uz";
-    
-    const baseInstruction = owner?.businessInstruction ? owner.businessInstruction : "";
-    const phoneText = owner?.phoneNumber ? ` Telefon raqami: ${owner.phoneNumber}.` : "";
-    const locationText = owner?.businessLocation ? ` Turgan joyi (lokatsiyasi): ${owner.businessLocation}.` : "";
+    // Faqat o'zingiz kiritgan avto-javob matnini olamiz (masalan: "Men bandman")
+    const baseInstruction = owner?.businessInstruction ? owner.businessInstruction : "Salom! Hozir bandman.";
 
-    const systemPrompt = `Sen Telegram foydalanuvchisining (Lazizbek) shaxsiy biznes assistentisan.
-Akaunt egasining ma'lumotlari:
-- Telefon raqami:${phoneText}
-- Turgan joyi (lokatsiyasi):${locationText}
-
-QOIDALAR:
-1. Mijozning xabariga javob berayotganda, javobning bosh qismiga MUTLAQO egasining maxsus xabarini ("${baseInstruction}") qo'shib yoz.
-2. Shundan so'ng, mijozning savoliga qarab AI va internet ma'lumotlaridan foydalangan holda yordamchi sifatida muloqotni tabiiy davom ettir.
-3. HECH QACHON o'zingni sun'iy intellekt, dastur yoki bot deb tanishtirma. Sen Lazizbekning yordamchisan.`;
-
-    const promptMessages = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: text }
-    ];
-
-    const aiAnswer = await queryAI(promptMessages, lang);
-    
-    let finalReply = "";
-    if (baseInstruction) {
-      finalReply = `${baseInstruction} ${aiAnswer || ""}`.trim();
-    } else {
-      finalReply = aiAnswer || "Salom! Sizga qanday yordam bera olaman?";
-    }
+    let finalReply = baseInstruction;
 
     if (owner) {
       await Memory.create({
@@ -205,7 +180,7 @@ QOIDALAR:
       await Memory.create({
         telegramId: owner.telegramId,
         role: "assistant",
-        content: `[AI Javob]: ${finalReply}`
+        content: `[Avto-javob]: ${finalReply}`
       });
     }
 
