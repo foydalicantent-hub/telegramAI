@@ -1,5 +1,5 @@
-import { mainMenuKeyboard } from "../keyboards/mainMenu.js";
-import { User } from "../models/User.js";
+import { mainMenuKeyboard } from "./mainMenu.js";
+import { User } from "./User.js";
 
 export async function startCommand(ctx) {
   const userId = ctx.from.id;
