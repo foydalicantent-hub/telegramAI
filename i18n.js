@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const translations = {};
 
 for (const lang of LANGUAGES) {
-  const filePath = path.join(__dirname, `${lang}.json`);
+  const filePath = path.join(__dirname, `../locales/${lang}.json`);
   translations[lang] = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
 
