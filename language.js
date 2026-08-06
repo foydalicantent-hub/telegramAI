@@ -1,7 +1,7 @@
 import { InlineKeyboard } from "grammy";
 import { getOrCreateUser } from "./userService.js";
 import { ensureLanguage } from "./User.js";
-import { t } from "./utils/i18n.js";
+import { t } from "./i18n.js";
 
 export function languageKeyboard() {
   return new InlineKeyboard()
