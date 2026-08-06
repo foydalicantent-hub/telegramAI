@@ -149,7 +149,7 @@ bot.on("business_connection", async (ctx) => {
   }
 });
 
-// Biznes xabarlarga javob berish (Faqat o'zingiz kiritgan avto-javob matnini yuboradi)
+// Biznes xabarlarga javob berish (Avval sizning matningiz, keyin AI javobi)
 bot.on("business_message", async (ctx) => {
   try {
     const message = ctx.businessMessage;
@@ -166,10 +166,35 @@ bot.on("business_message", async (ctx) => {
       return;
     }
 
-    // Faqat o'zingiz kiritgan avto-javob matnini olamiz (masalan: "Men bandman")
-    const baseInstruction = owner?.businessInstruction ? owner.businessInstruction : "Salom! Hozir bandman.";
+    const lang = owner ? ensureLanguage(owner) : "uz";
+    
+    const baseInstruction = owner?.businessInstruction ? owner.businessInstruction : "";
+    const phoneText = owner?.phoneNumber ? ` Telefon raqami: ${owner.phoneNumber}.` : "";
+    const locationText = owner?.businessLocation ? ` Turgan joyi (lokatsiyasi): ${owner.businessLocation}.` : "";
 
-    let finalReply = baseInstruction;
+    const systemPrompt = `Sen Telegram foydalanuvchisining (Lazizbek) shaxsiy biznes assistentisan.
+Akaunt egasining ma'lumotlari:
+- Telefon raqami:${phoneText}
+- Turgan joyi (lokatsiyasi):${locationText}
+
+QOIDALAR:
+1. Mijozning xabariga javob berayotganda, mijozning savoliga qarab AI yordamida yordamchi sifatida muloqotni tabiiy davom ettir.
+2. HECH QACHON o'zingni sun'iy intellekt, dastur yoki bot deb tanishtirma. Sen Lazizbekning yordamchisan.`;
+
+    const promptMessages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: text }
+    ];
+
+    const aiAnswer = await queryAI(promptMessages, lang);
+    
+    // Avval siz yozgan matn (baseInstruction), keyin AI javobi birlashtiriladi
+    let finalReply = "";
+    if (baseInstruction) {
+      finalReply = `${baseInstruction}\n\n${aiAnswer || ""}`.trim();
+    } else {
+      finalReply = aiAnswer || "Salom! Sizga qanday yordam bera olaman?";
+    }
 
     if (owner) {
       await Memory.create({
@@ -180,7 +205,7 @@ bot.on("business_message", async (ctx) => {
       await Memory.create({
         telegramId: owner.telegramId,
         role: "assistant",
-        content: `[Avto-javob]: ${finalReply}`
+        content: `[AI Javob]: ${finalReply}`
       });
     }
 
