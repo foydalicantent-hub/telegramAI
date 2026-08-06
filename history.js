@@ -1,8 +1,8 @@
-import { Memory } from "../Memory.js";
-import { getOrCreateUser } from "../userService.js";
-import { ensureLanguage } from "../User.js";
-import { HISTORY_DISPLAY_LIMIT } from "../constants.js";
-import { t } from "../i18n.js";
+import { Memory } from "./Memory.js";
+import { getOrCreateUser } from "./userService.js";
+import { ensureLanguage } from "./User.js";
+import { HISTORY_DISPLAY_LIMIT } from "./constants.js";
+import { t } from "./i18n.js";
 
 function truncate(text, max = 200) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
