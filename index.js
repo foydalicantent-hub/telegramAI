@@ -17,7 +17,6 @@ import { mainMenuKeyboard } from "./mainMenu.js";
 import { getOrCreateUser } from "./userService.js";
 import { ensureLanguage, User } from "./User.js";
 import { Memory } from "./Memory.js";
-import { queryAI } from "./aiService.js";
 
 assertRequiredConfig();
 await connectDB();
@@ -231,7 +230,7 @@ bot.on("business_connection", async (ctx) => {
   }
 });
 
-// Biznes xabarlarga javob berish
+// Biznes xabarlarga javob berish (FAQAT SIZ YOZGAN MATN BORADI)
 bot.on("business_message", async (ctx) => {
   try {
     const message = ctx.businessMessage;
@@ -253,36 +252,11 @@ bot.on("business_message", async (ctx) => {
       return;
     }
 
-    const lang = ensureLanguage(owner);
-    const baseInstruction = owner.businessInstruction ? owner.businessInstruction : "Men bandman soat 22:00 da yozing";
-    const phoneText = owner.phoneNumber ? ` Telefon raqami: ${owner.phoneNumber}.` : "";
-    const locationText = owner.businessLocation ? ` Turgan joyi: ${owner.businessLocation}.` : "";
-
-    const systemPrompt = `Sen Telegram foydalanuvchisining shaxsiy biznes assistentisan.
-Akaunt egasining ma'lumotlari:
-- Telefon raqami:${phoneText}
-- Turgan joyi:${locationText}
-
-QOIDALAR:
-1. Mijozning xabariga javob berayotganda, mijozning savoliga qarab AI yordamida muloqotni tabiiy davom ettir.
-2. HECH QACHON o'zingni sun'iy intellekt, dastur yoki bot deb tanishtirma.`;
-
-    const promptMessages = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: text }
-    ];
-
-    const aiAnswer = await queryAI(promptMessages, lang);
-    
-    let finalReply = "";
-    if (baseInstruction) {
-      finalReply = `${baseInstruction}\n\n${aiAnswer || ""}`.trim();
-    } else {
-      finalReply = aiAnswer || "Salom! Sizga qanday yordam bera olaman?";
-    }
+    // FAQAT SIZ YOZGAN MATN (AI ishtirok etmaydi)
+    const finalReply = owner.businessInstruction || "Men bandman soat 22:00 da yozing";
 
     await Memory.create({ telegramId: owner.telegramId, role: "user", content: `[Mijoz]: ${text}` });
-    await Memory.create({ telegramId: owner.telegramId, role: "assistant", content: `[AI Javob]: ${finalReply}` });
+    await Memory.create({ telegramId: owner.telegramId, role: "assistant", content: `[Avto-javob]: ${finalReply}` });
 
     await ctx.reply(finalReply, {
       business_connection_id: message.business_connection_id,
@@ -342,7 +316,7 @@ bot.on("message:text", async (ctx, next) => {
       await user.save();
 
       await ctx.reply(
-        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi oflayn paytingizda mijozlarga shu matn yuboriladi.`,
+        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi oflayn paytingizda mijozlarga faqat shu matn yuboriladi.`,
         { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
       );
       return;
