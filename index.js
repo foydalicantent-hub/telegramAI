@@ -17,6 +17,7 @@ import { mainMenuKeyboard } from "./mainMenu.js";
 import { getOrCreateUser } from "./userService.js";
 import { ensureLanguage, User } from "./User.js";
 import { Memory } from "./Memory.js";
+import { queryAI } from "./aiService.js";
 
 assertRequiredConfig();
 await connectDB();
@@ -84,7 +85,7 @@ bot.hears("🟢 Avto-javobni yoqish", async (ctx) => {
     await user.save();
 
     await ctx.reply(
-      "✅ **Avto-javob yoqildi!**\n\nEndi oflayn paytingizda sizga yozgan yangi mijozlarga belgilangan xabaringiz faqat bir marta avtomatik yuboriladi.",
+      "✅ **Avto-javob yoqildi!**\n\nEndi oflayn paytingizda mijozlarga avval sizning xabaringiz, keyingi xabarlarga esa AI javob beradi.",
       { 
         parse_mode: "Markdown",
         reply_markup: {
@@ -102,7 +103,7 @@ bot.hears("🟢 Avto-javobni yoqish", async (ctx) => {
   }
 });
 
-// 🔴 AVTO-JAVOBni O'CHIRISH TUGMASI
+// 🔴 AVTO-JAVOBNI O'CHIRISH TUGMASI
 bot.hears("🔴 Avto-javobni o'chirish", async (ctx) => {
   try {
     const userId = ctx.from.id;
@@ -152,7 +153,7 @@ bot.hears("📞 Avto-javob sozlash (Kontakt yuborish)", async (ctx) => {
   );
 });
 
-// 📞 KONTAKTNI QABUL QILIB OLISH VA XABARNI SO'RASH
+// 📞 KONTAKTni QABUL QILIB OLISH VA XABARni SO'RASH
 bot.on("message:contact", async (ctx) => {
   try {
     const contact = ctx.message.contact;
@@ -170,7 +171,7 @@ bot.on("message:contact", async (ctx) => {
       );
 
       await ctx.reply(
-        "✅ **Raqamingiz qabul qilindi!**\n\n📝 Endi menga boshqalarga yuborishim kerak bo'lgan **o'zingizning xabaringizni (masalan: Men bandman soat 22:00 da yozing)** yuboring:",
+        "✅ **Raqamingiz qabul qilindi!**\n\n📝 Endi menga boshqalarga yuborishim kerak bo'lgan **o'zingizning xabaringizni (masalan: Men bandman tel qiling)** yuboring:",
         { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
       );
     }
@@ -230,7 +231,7 @@ bot.on("business_connection", async (ctx) => {
   }
 });
 
-// Biznes xabarlarga javob berish (FAQAT BIR MARTA JAVOB BERADI)
+// Biznes xabarlarga javob berish (1-marta sizning matn, keyin AI)
 bot.on("business_message", async (ctx) => {
   try {
     const message = ctx.businessMessage;
@@ -252,26 +253,50 @@ bot.on("business_message", async (ctx) => {
       return;
     }
 
-  // Shu foydalanuvchiga bu seansda allaqachon javob berilganligini tekshiramiz
+    // Ushbu mijozga avval maxsus matn yuborilganmi?
     const existingMemory = await Memory.findOne({ 
       telegramId: owner.telegramId, 
       role: "assistant", 
       content: { $regex: `\\[Mijoz ID: ${senderId}\\]` } 
     });
 
-    if (existingMemory) {
-      // Agar avval javob berilgan bo'lsa, qayta yubormaymiz (jim turamiz)
-      return;
+    let finalReply = "";
+
+    if (!existingMemory) {
+      // 1-MARTASI: Faqat sizning matningiz boradi
+      finalReply = owner.businessInstruction || "Men bandman tel qiling";
+      
+      // Xotiraga yozib qo'yamizki, bu mijozga birinchi matn ketdi
+      await Memory.create({ 
+        telegramId: owner.telegramId, 
+        role: "assistant", 
+        content: `[Mijoz ID: ${senderId}] [Birinchi matn]: ${finalReply}` 
+      });
+    } else {
+      // KEYINGI MARTALARI: AI ishga tushib muloqotni davom ettiradi
+      const lang = ensureLanguage(owner);
+      const phoneText = owner.phoneNumber ? ` Telefon raqami: ${owner.phoneNumber}.` : "";
+      const locationText = owner.businessLocation ? ` Turgan joyi: ${owner.businessLocation}.` : "";
+
+      const systemPrompt = `Sen Telegram foydalanuvchisining shaxsiy biznes assistentisan. Akaunt egasi hozir band.
+Akaunt egasining ma'lumotlari:
+- Telefon raqami:${phoneText}
+- Turgan joyi:${locationText}
+
+QOIDALAR:
+1. Mijozning keyingi xabarlariga qarab AI yordamida muloqotni tabiiy davom ettir.
+2. HECH QACHON o'zingni sun'iy intellekt, dastur yoki bot deb tanishtirma.`;
+
+      const promptMessages = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: text }
+      ];
+
+      finalReply = await queryAI(promptMessages, lang) || "Tushunarli, tez orada bog'lanamiz.";
+
+      await Memory.create({ telegramId: owner.telegramId, role: "user", content: `[Mijoz]: ${text}` });
+      await Memory.create({ telegramId: owner.telegramId, role: "assistant", content: `[AI Javob]: ${finalReply}` });
     }
-
-    const finalReply = owner.businessInstruction || "Men bandman soat 22:00 da yozing";
-
-    // Xotiraga saqlaymiz (Mijoz ID sini qo'shib, qayta yubormasligi uchun)
-    await Memory.create({ 
-      telegramId: owner.telegramId, 
-      role: "assistant", 
-      content: `[Mijoz ID: ${senderId}] [Avto-javob]: ${finalReply}` 
-    });
 
     await ctx.reply(finalReply, {
       business_connection_id: message.business_connection_id,
@@ -331,7 +356,7 @@ bot.on("message:text", async (ctx, next) => {
       await user.save();
 
       await ctx.reply(
-        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi oflayn paytingizda mijozlarga faqat bir marta shu matn yuboriladi.`,
+        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi mijoz birinchi marta yozganda shu matn, keyingilariga esa AI javob beradi.`,
         { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
       );
       return;
