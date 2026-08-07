@@ -9,7 +9,6 @@ import { startCommand } from "./start.js";
 import { helpCommand } from "./help.js";
 import { languageCommand, languageCallback } from "./language.js";
 import { cleanCommand } from "./clean.js";
-import { historyCommand } from "./history.js";
 import { muammoCommand } from "./feedback.js";
 import { grantCommand } from "./adminGrant.js";
 import { chatHandler } from "./chat.js";
@@ -39,7 +38,7 @@ await bot.api.setMyCommands([
   { command: "start", description: "Botni ishga tushirish" },
   { command: "help", description: "Yordam va ko'rsatmalar" },
   { command: "clean", description: "Muloqot tarixini tozalash" },
-  { command: "history", description: "Suhbatlar tarixini ko'rish" },
+  { command: "history", description: "Kontakt yuborgan mijozlar tarixi" },
   { command: "about", description: "Bot haqida ma'lumot" },
   { command: "muammo", description: "Nosozlik haqida xabar berish" },
   { command: "avto_telefon", description: "Avto-javob sozlash haqida" },
@@ -49,9 +48,57 @@ bot.command("start", startCommand);
 bot.command("help", helpCommand);
 bot.command("language", languageCommand);
 bot.command("clean", cleanCommand);
-bot.command(["history", "istorya"], historyCommand);
 bot.command("muammo", muammoCommand);
 bot.command("grant", grantCommand);
+
+// 📋 /HISTORY BUYRUG'I (Faqat kontakt ulashgan mijozlar ro'yxati)
+bot.command(["history", "istorya"], async (ctx) => {
+  try {
+    const userId = ctx.from.id;
+    
+    const memories = await Memory.find({ 
+      telegramId: userId, 
+      content: { $regex: /Mijoz ID/ } 
+    }).sort({ createdAt: -1 });
+
+    if (!memories || memories.length === 0) {
+      await ctx.reply("📂 Hozircha sizga kontakt yuborib murojaat qilgan mijozlar tarixi yo'q.", { reply_markup: mainMenuKeyboard });
+      return;
+    }
+
+    const uniqueClients = new Map();
+    memories.forEach(m => {
+      const match = m.content.match(/Mijoz ID: (\d+)/);
+      const nameMatch = m.content.match(/Ism: ([^\]]+)/);
+      if (match && match[1]) {
+        const clientId = match[1];
+        const clientName = nameMatch ? nameMatch[1].trim() : "Noma'lum";
+        if (!uniqueClients.has(clientId)) {
+          uniqueClients.set(clientId, {
+            name: clientName,
+            clientId: clientId,
+            date: new Date(m.createdAt).toLocaleString()
+          });
+        }
+      }
+    });
+
+    let text = "📋 **Mijozlar tarixi va kontaktlar:**\n\n";
+    let index = 1;
+
+    for (const [clientId, info] of uniqueClients) {
+      text += `${index}. 👤 **Ism:** ${info.name}\n`;
+      text += `   🆔 **ID:** <code>${clientId}</code>\n`;
+      text += `   📅 Oxirgi murojaat: ${info.date}\n\n`;
+      index++;
+    }
+
+    await ctx.reply(text, { parse_mode: "HTML", reply_markup: mainMenuKeyboard });
+  } catch (err) {
+    logger.error(`History command error: ${err.message}`);
+    await ctx.reply("❌ Tarixni olishda xatolik yuz berdi.", { reply_markup: mainMenuKeyboard });
+  }
+});
 
 bot.command("about", async (ctx) => {
   await ctx.reply(
@@ -85,7 +132,7 @@ bot.hears("🟢 Avto-javobni yoqish", async (ctx) => {
     await user.save();
 
     await ctx.reply(
-      "✅ **Avto-javob yoqildi!**\n\nOflayn paytingizda mijozlarga avval sizning xabaringiz, keyingilariga esa AI javob beradi.",
+      "✅ **Avto-javob yoqildi!**\n\nOflayn paytingizda mijozlarga avval sizning xabaringiz, keyingilariga esa AI (maksimal 5 marta) javob beradi.",
       { 
         parse_mode: "Markdown",
         reply_markup: {
@@ -231,12 +278,13 @@ bot.on("business_connection", async (ctx) => {
   }
 });
 
-// Biznes xabarlarga javob berish (Agar o'zingiz yozgan bo'lsangiz yoki o'sha chatda bo'lsangiz - aralashmaydi)
+// Biznes xabarlarga javob berish (Maksimal 5 marta javob yozadi)
 bot.on("business_message", async (ctx) => {
   try {
     const message = ctx.businessMessage;
     const text = message.text;
     const senderId = message.from ? message.from.id : null;
+    const senderName = message.from ? `${message.from.first_name || ""} ${message.from.last_name || ""}`.trim() : "Noma'lum";
 
     if (!text || !senderId) return;
 
@@ -249,36 +297,29 @@ bot.on("business_message", async (ctx) => {
       return;
     }
 
-    // Agar xabarni o'zingiz yozgan bo'lsangiz yoki chat egasi o'zi yuborgan bo'lsa - javob qaytarmaydi
     if (message.from && message.from.id === owner.telegramId) {
       return;
     }
 
-    // Agar xabar chiqqan paytda outgoing (ya'ni siz o'sha chatda turib o'zingiz javob yozgan bo'lsangiz) - jim turadi
     if (message.is_outgoing) {
       return;
     }
 
-    // Ushbu mijozga avval maxsus matn yuborilganmi?
-    const existingMemory = await Memory.findOne({ 
+    const replyCount = await Memory.countDocuments({ 
       telegramId: owner.telegramId, 
       role: "assistant", 
       content: { $regex: `\\[Mijoz ID: ${senderId}\\]` } 
     });
 
+    if (replyCount >= 5) {
+      return;
+    }
+
     let finalReply = "";
 
-    if (!existingMemory) {
-      // 1-MARTASI: Faqat sizning matningiz boradi
+    if (replyCount === 0) {
       finalReply = owner.businessInstruction || "Bandman tel qiling";
-      
-      await Memory.create({ 
-        telegramId: owner.telegramId, 
-        role: "assistant", 
-        content: `[Mijoz ID: ${senderId}] [Birinchi matn]: ${finalReply}` 
-      });
     } else {
-      // KEYINGI MARTALARI: AI ishga tushib muloqotni davom ettiradi
       const lang = ensureLanguage(owner);
       const phoneText = owner.phoneNumber ? ` Telefon raqami: ${owner.phoneNumber}.` : "";
       const locationText = owner.businessLocation ? ` Turgan joyi: ${owner.businessLocation}.` : "";
@@ -298,10 +339,13 @@ QOIDALAR:
       ];
 
       finalReply = await queryAI(promptMessages, lang) || "Tushunarli, tez orada bog'lanamiz.";
-
-      await Memory.create({ telegramId: owner.telegramId, role: "user", content: `[Mijoz]: ${text}` });
-      await Memory.create({ telegramId: owner.telegramId, role: "assistant", content: `[AI Javob]: ${finalReply}` });
     }
+
+    await Memory.create({ 
+      telegramId: owner.telegramId, 
+      role: "assistant", 
+      content: `[Mijoz ID: ${senderId}] [Ism: ${senderName}] ${finalReply}` 
+    });
 
     await ctx.reply(finalReply, {
       business_connection_id: message.business_connection_id,
@@ -325,25 +369,25 @@ bot.on("message:photo", async (ctx) => {
   }
 });
 
-// VIDEO HANDLER (Dumaloq video qilish uchun to'g'irlandi)
+// VIDEO HANDLER (Dumaloq video qilish)
 bot.on("message:video", async (ctx) => {
   try {
     const user = await getOrCreateUser(ctx);
-    if (user.mode === "circle") {
-      const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...", { reply_markup: mainMenuKeyboard });
-      try {
-        await ctx.replyWithVideoNote(ctx.message.video.file_id);
-        await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-      } catch (err) {
-        await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-        await ctx.reply("ℹ️ Videongiz Telegram Video formatida yuborildi:", { reply_markup: mainMenuKeyboard });
-        await ctx.replyWithVideo(ctx.message.video.file_id);
-      }
-      user.mode = "ai";
-      await user.save();
-      return;
+    const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...", { reply_markup: mainMenuKeyboard });
+    
+    try {
+      const video = ctx.message.video;
+      await ctx.replyWithVideoNote(video.file_id);
+      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+    } catch (err) {
+      logger.error(`Video note error: ${err.message}`);
+      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+      await ctx.reply(
+        "⚠️ Telegram qoidalariga ko'ra har qanday videoni dumaloq qilib bo'lmaydi (video kvadrat shaklida bo'lishi kerak). Videongiz oddiy formatda yuborildi:", 
+        { reply_markup: mainMenuKeyboard }
+      );
+      await ctx.replyWithVideo(ctx.message.video.file_id);
     }
-    await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Siz yuborgan video", reply_markup: mainMenuKeyboard });
   } catch (error) {
     logger.error(`Video handler error: ${error.message}`);
   }
@@ -362,7 +406,7 @@ bot.on("message:text", async (ctx, next) => {
       await user.save();
 
       await ctx.reply(
-        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi mijoz birinchi marta yozganda shu matn, keyingilariga esa AI javob beradi.`,
+        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi va yoqildi!**\n\nSiz yozgan matn:\n"${ctx.message.text}"\n\nEndi mijozga 1-marta shu matn, keyingilariga AI (maksimal 5 marta) javob beradi.`,
         { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
       );
       return;
