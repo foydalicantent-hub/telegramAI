@@ -14,7 +14,7 @@ import { grantCommand } from "./adminGrant.js";
 import { chatHandler } from "./chat.js";
 import { User } from "./User.js";
 import { Memory } from "./Memory.js";
-import { queryAI, generateImage } from "./aiService.js";
+import { queryAI, generateImage, queryClaude } from "./aiService.js";
 
 assertRequiredConfig();
 await connectDB();
@@ -139,7 +139,7 @@ bot.hears("🔙 Ortga", async (ctx) => {
   await ctx.reply("🏠 **Asosiy menyuga qaytdingiz:**", { reply_markup: mainMenuKeyboard });
 });
 
-// ================= BO'LIM 1: AI VA QIDIRUV =================
+// ================= BO'LIM 1: AI VA QIDIRUV (REJIMLARNI O'RNATISH) =================
 
 bot.hears("🌐 AI va Qidiruv", async (ctx) => {
   await ctx.reply("🌐 **AI va Qidiruv bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu1Keyboard });
@@ -484,7 +484,7 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
-// ================= MATNLI XABARLAR VA REJIMLAR BO'YICHA ISHLASH =================
+// ================= MATNLI XABARLAR VA REJIMLAR BO'YICHA QAT'IY AJratilgan ISHLASH =================
 
 bot.on("message:text", async (ctx, next) => {
   try {
@@ -505,7 +505,7 @@ bot.on("message:text", async (ctx, next) => {
 
     const mode = user?.currentMode || "ai_chat";
 
-    // 2. Rasm yaratish rejimi
+    // 2. Rasm Yaratish Rejimi (Faqat DALL-E)
     if (mode === "image_gen") {
       const waitMsg = await ctx.reply("🎨 Rasm yaratilmoqda, iltimos kuting...");
       const imageUrl = await generateImage(text);
@@ -519,9 +519,21 @@ bot.on("message:text", async (ctx, next) => {
       return;
     }
 
+    // 3. Claude AI Rejimi (Faqat Claude)
+    if (mode === "claude") {
+      const waitMsg = await ctx.reply("🧠 Claude AI tahlil qilmoqda, biroz kuting...");
+      const claudeReply = await queryClaude(text) || "Claude AI javob berishda xatolik yuz berdi.";
+      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+
+      await Memory.create({ telegramId: userId, role: "user", content: text });
+      await Memory.create({ telegramId: userId, role: "assistant", content: claudeReply });
+      await ctx.reply(claudeReply, { reply_markup: mainMenuKeyboard });
+      return;
+    }
+
     let promptMessages = [];
 
-    // 3. Qolgan rejimlarni to'g'ri taqsimlash
+    // 4. Qolgan rejimlarni alohida va aniq taqsimlash
     if (mode === "movie") {
       promptMessages = [
         { role: "system", content: "Sen kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi so'ragan kino, serial yoki uning tarjima qilingan nomini, mazmunini va qayerdan topish mumkinligini aniq tushuntirib ber." },
@@ -548,7 +560,7 @@ bot.on("message:text", async (ctx, next) => {
         { role: "user", content: text }
       ];
     } else {
-      // Standart AI chat va tarix
+      // Standart AI Chat (Faqat oddiy chat)
       const history = await Memory.find({ telegramId: userId }).sort({ createdAt: -1 }).limit(6);
       promptMessages = history.reverse().map(m => ({
         role: m.role === "user" ? "user" : "assistant",
@@ -582,4 +594,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with all features fully operational!");
+logger.info("Telegram Bot successfully started with strictly separated modes!");
