@@ -14,7 +14,7 @@ import { grantCommand } from "./adminGrant.js";
 import { chatHandler } from "./chat.js";
 import { User } from "./User.js";
 import { Memory } from "./Memory.js";
-import { queryAI } from "./aiService.js";
+import { queryAI, generateImage } from "./aiService.js";
 
 assertRequiredConfig();
 await connectDB();
@@ -504,9 +504,24 @@ bot.on("message:text", async (ctx, next) => {
     }
 
     const mode = user?.currentMode || "ai_chat";
+
+    // 2. Rasm yaratish rejimi
+    if (mode === "image_gen") {
+      const waitMsg = await ctx.reply("🎨 Rasm yaratilmoqda, iltimos kuting...");
+      const imageUrl = await generateImage(text);
+      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+      
+      if (imageUrl) {
+        await ctx.replyWithPhoto(imageUrl, { caption: "🎨 AI tomonidan yaratilgan rasm!", reply_markup: mainMenuKeyboard });
+      } else {
+        await ctx.reply("❌ Rasm yaratishda xatolik yuz berdi.", { reply_markup: mainMenuKeyboard });
+      }
+      return;
+    }
+
     let promptMessages = [];
 
-    // Har bir rejim uchun alohida tizim ko'rsatmasi (System Prompt)
+    // 3. Qolgan rejimlarni to'g'ri taqsimlash
     if (mode === "movie") {
       promptMessages = [
         { role: "system", content: "Sen kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi so'ragan kino, serial yoki uning tarjima qilingan nomini, mazmunini va qayerdan topish mumkinligini aniq tushuntirib ber." },
@@ -567,4 +582,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with fixed search and correct modes!");
+logger.info("Telegram Bot successfully started with all features fully operational!");
