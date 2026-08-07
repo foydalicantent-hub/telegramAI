@@ -139,7 +139,7 @@ bot.hears("🔙 Ortga", async (ctx) => {
   await ctx.reply("🏠 **Asosiy menyuga qaytdingiz:**", { reply_markup: mainMenuKeyboard });
 });
 
-// ================= BO'LIM 1: AI VA QIDIRUV (REJIMLARNI O'RNATISH) =================
+// ================= BO'LIM 1: AI VA QIDIRUV =================
 
 bot.hears("🌐 AI va Qidiruv", async (ctx) => {
   await ctx.reply("🌐 **AI va Qidiruv bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu1Keyboard });
@@ -178,12 +178,12 @@ bot.hears("🖼 Rasm va Video O'qish", async (ctx) => {
 
 bot.hears("🔴 Dumaloq Video", async (ctx) => {
   await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "video_note" }, { upsert: true });
-  await ctx.reply("🔴 **Dumaloq Video (`video_note`):**\nMenga oddiy video yuboring, uni dumaloq shaklga o'tkazib beraman.", { reply_markup: submenu2Keyboard });
+  await ctx.reply("🔴 **Dumaloq Video:**\nMenga oddiy video yuboring, uni dumaloq shaklga o'tkazib beraman.", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🔗 Link orqali Yuklash", async (ctx) => {
   await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "downloader" }, { upsert: true });
-  await ctx.reply("🔗 **Media Yuklovchi:**\nRasm yoki video havolasini (linkini) yuboring, uni yuklab beraman.", { reply_markup: submenu2Keyboard });
+  await ctx.reply("🔗 **Media Yuklovchi:**\nRasm yoki video havolasini yuboring, uni yuklab beraman.", { reply_markup: submenu2Keyboard });
 });
 
 // ================= BO'LIM 3: KOD VA INSTRUMENTLAR =================
@@ -484,7 +484,7 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
-// ================= MATNLI XABARLAR VA REJIMLAR BO'YICHA QAT'IY AJratilgan ISHLASH =================
+// ================= MATNLI XABARLAR VA QAT'IY AJratilgan REJIMLAR =================
 
 bot.on("message:text", async (ctx, next) => {
   try {
@@ -533,7 +533,7 @@ bot.on("message:text", async (ctx, next) => {
 
     let promptMessages = [];
 
-    // 4. Qolgan rejimlarni alohida va aniq taqsimlash
+    // 4. Qolgan rejimlarni qat'iy va aniq taqsimlash
     if (mode === "movie") {
       promptMessages = [
         { role: "system", content: "Sen kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi so'ragan kino, serial yoki uning tarjima qilingan nomini, mazmunini va qayerdan topish mumkinligini aniq tushuntirib ber." },
