@@ -1,28 +1,20 @@
+import { mainMenuKeyboard } from "./mainMenu.js";
 import { User } from "./User.js";
 
-// Rasmda ko'rsatilgan aniq asosiy menyu
-const mainMenuKeyboard = {
-  keyboard: [
-    [{ text: "🌐 AI va Qidiruv" }, { text: "🎥 Media va Yaratish" }],
-    [{ text: "💻 Kod va Instrumentlar" }, { text: "⚡️ Biznes Avto-javob" }],
-    [{ text: "📜 Muloqot Tarixi" }, { text: "✨ Tez kunda (Bo'sh)" }]
-  ],
-  resize_keyboard: true
-};
-
 export async function startCommand(ctx) {
-  const userId = ctx.from.id;
+  const userId = ctx.from.id;
 
-  await User.findOneAndUpdate(
-    { telegramId: userId },
-    { waitingForInstruction: false },
-    { upsert: true }
-  );
+  // /start bosilganda agar eski kutish holati qolgan bo'lsa, uni tozalab tashlaymiz
+  await User.findOneAndUpdate(
+    { telegramId: userId },
+    { waitingForInstruction: false },
+    { upsert: true }
+  );
 
-  await ctx.reply(
-    "👋 Assalomu alaykum! Kerakli bo'limni tanlang:",
-    {
-      reply_markup: mainMenuKeyboard,
-    }
-  );
-}
+  await ctx.reply(
+    "👋 Assalomu alaykum! Telegram Business va AI yordamchi botiga xush kelibsiz. Kerakli funksiyani tanlang:",
+    {
+      reply_markup: mainMenuKeyboard,
+    }
+  );
+} mana start.js
