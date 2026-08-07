@@ -14,7 +14,7 @@ import { grantCommand } from "./adminGrant.js";
 import { chatHandler } from "./chat.js";
 import { User } from "./User.js";
 import { Memory } from "./Memory.js";
-import { queryAI } from "./aiService.js";
+import { queryAI, generateImage, queryClaude } from "./aiService.js";
 
 assertRequiredConfig();
 await connectDB();
@@ -37,6 +37,8 @@ await bot.api.setMyCommands([
   { command: "help", description: "Yordam va ko'rsatmalar" },
   { command: "clean", description: "Muloqot tarixini tozalash" },
   { command: "history", description: "Mijozlar tarixi" },
+  { command: "about", description: "Bot haqida ma'lumot" },
+  { command: "muammo", description: "Nosozlik haqida xabar berish" },
 ]);
 
 // ================= KLAVIATURALAR VA MENYULAR =================
@@ -98,7 +100,7 @@ const submenu4Keyboard = {
   resize_keyboard: true
 };
 
-// ================= START VA TIL TANLASH =================
+// ================= START VA BUYRUQLAR =================
 
 bot.command("start", async (ctx) => {
   await ctx.reply(
@@ -109,6 +111,18 @@ bot.command("start", async (ctx) => {
       parse_mode: "Markdown",
       reply_markup: languageKeyboard
     }
+  );
+});
+
+bot.command("help", helpCommand);
+bot.command("clean", cleanCommand);
+bot.command("muammo", muammoCommand);
+bot.command("grant", grantCommand);
+
+bot.command("about", async (ctx) => {
+  await ctx.reply(
+    "🤖 **Bot Haqida Ma'lumot**\n\nUshbu bot sizga AI muloqot, kino va internet qidiruv hamda Telegram Biznes assistent xizmatlarini taqdim etadi.",
+    { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
   );
 });
 
@@ -135,6 +149,7 @@ bot.callbackQuery(/^set_lang_/, async (ctx) => {
 });
 
 bot.hears("🔙 Ortga", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "ai_chat" }, { upsert: true });
   await ctx.reply("🏠 **Asosiy menyuga qaytdingiz:**", { reply_markup: mainMenuKeyboard });
 });
 
@@ -145,14 +160,17 @@ bot.hears("🌐 AI va Qidiruv", async (ctx) => {
 });
 
 bot.hears("🤖 AI Chat", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "ai_chat" }, { upsert: true });
   await ctx.reply("🤖 **AI Chat rejimi faol!**\nSizni qiziqtirgan har qanday savolni yozib yuboring:", { reply_markup: submenu1Keyboard });
 });
 
 bot.hears("🔍 Internet Qidiruv", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "search" }, { upsert: true });
   await ctx.reply("🔍 **Internet Qidiruv:**\nNimani qidirmoqchisiz? Kalit so'z yoki savolingizni yuboring:", { reply_markup: submenu1Keyboard });
 });
 
 bot.hears("🎬 Kino Topish", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "movie" }, { upsert: true });
   await ctx.reply("🎬 **Kino Topish:**\nQaysi kino yoki serialni qidiryapsiz? Nomini yozing:", { reply_markup: submenu1Keyboard });
 });
 
@@ -163,19 +181,23 @@ bot.hears("🎥 Media va Yaratish", async (ctx) => {
 });
 
 bot.hears("🎨 Rasm Yaratish", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "image_gen" }, { upsert: true });
   await ctx.reply("🎨 **Rasm Yaratish:**\nYaratilishi kerak bo'lgan rasm tasvirini batafsil yozib yuboring:", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🖼 Rasm va Video O'qish", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "vision" }, { upsert: true });
   await ctx.reply("🖼 **Rasm va Video O'qish:**\nMenga rasm yoki video yuboring, uni tahlil qilib beraman.", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🔴 Dumaloq Video", async (ctx) => {
-  await ctx.reply("🔴 **Dumaloq Video (`video_note`):**\nMenga oddiy video yuboring, uni dumaloq shaklga o'tkazib beraman.", { reply_markup: submenu2Keyboard });
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "video_note" }, { upsert: true });
+  await ctx.reply("🔴 **Dumaloq Video:**\nMenga oddiy video yuboring, uni dumaloq shaklga o'tkazib beraman.", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🔗 Link orqali Yuklash", async (ctx) => {
-  await ctx.reply("🔗 **Media Yuklovchi:**\nRasm yoki video havolasini (linkini) yuboring, uni yuklab beraman.", { reply_markup: submenu2Keyboard });
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "downloader" }, { upsert: true });
+  await ctx.reply("🔗 **Media Yuklovchi:**\nRasm yoki video havolasini yuboring, uni yuklab beraman.", { reply_markup: submenu2Keyboard });
 });
 
 // ================= BO'LIM 3: KOD VA INSTRUMENTLAR =================
@@ -185,22 +207,27 @@ bot.hears("💻 Kod va Instrumentlar", async (ctx) => {
 });
 
 bot.hears("💻 Kod Yozish", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "coding" }, { upsert: true });
   await ctx.reply("💻 **Kod Yozish Assistent:**\nQaysi tilda va qanday vazifa uchun kod yozish kerakligini ayting:", { reply_markup: submenu3Keyboard });
 });
 
 bot.hears("🧠 Claude AI", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "claude" }, { upsert: true });
   await ctx.reply("🧠 **Claude AI Rejimi:**\nClaude AI modeli orqali chuqur tahlil va muloqot qilish uchun savol yuboring:", { reply_markup: submenu3Keyboard });
 });
 
 bot.hears("📁 Fayl O'qish", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "file_read" }, { upsert: true });
   await ctx.reply("📁 **Fayl Tahlilchisi:**\nHujjat, kod fayli yoki matnli fayl tashlang, uni o'qib tushuntirib beraman.", { reply_markup: submenu3Keyboard });
 });
 
 bot.hears("🌐 Tarjima", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "translate" }, { upsert: true });
   await ctx.reply("🌐 **Tarjimon:**\nTarjima qilinishi kerak bo'lgan matnni va qaysi tilga o'girish kerakligini yuboring:", { reply_markup: submenu3Keyboard });
 });
 
 bot.hears("🎮 Mod Oyunlar", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "mod_games" }, { upsert: true });
   await ctx.reply("🎮 **Modli O'yinlar Qidiruvi:**\nO'zingizga kerakli o'yin nomini yozing. Men uning mod/apk faylini yoki yuklash linkini topib beraman:", { reply_markup: submenu3Keyboard });
 });
 
@@ -348,14 +375,19 @@ bot.on("message:contact", async (ctx) => {
 
 bot.on("message:video", async (ctx) => {
   try {
-    const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...");
-    try {
-      await ctx.replyWithVideoNote(ctx.message.video.file_id);
-      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-    } catch (err) {
-      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-      await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Videongiz yuklandi!" });
+    const user = await User.findOne({ telegramId: ctx.from.id });
+    if (user && user.currentMode === "video_note") {
+      const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...", { reply_markup: mainMenuKeyboard });
+      try {
+        await ctx.replyWithVideoNote(ctx.message.video.file_id);
+        await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+      } catch (err) {
+        await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+        await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Videongiz yuklandi!" });
+      }
+      return;
     }
+    await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Siz yuborgan video", reply_markup: mainMenuKeyboard });
   } catch (error) {
     logger.error(`Video handler error: ${error.message}`);
   }
@@ -471,31 +503,90 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
-// ================= MATNLI XABARLAR VA CHAT HANDLER =================
+// ================= MATNLI XABARLAR VA QAT'IY BOSHQARILADIGAN REJIMLAR =================
 
-bot.on("message:text", async (ctx, next) => {
+bot.on("message:text", async (ctx) => {
   try {
     const userId = ctx.from.id;
+    const text = ctx.message.text;
     const user = await User.findOne({ telegramId: userId });
 
+    // 1. Biznes tahrirlash holati
     if (user && user.waitingForInstruction) {
-      user.businessInstruction = ctx.message.text;
+      user.businessInstruction = text;
       user.waitingForInstruction = false;
       user.autoReplyActive = true;
       await user.save();
 
-      await ctx.reply(
-        `✅ **Avto-javob matningiz saqlandi va yoqildi!**\n\nYangi matn:\n"${ctx.message.text}"`,
-        { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
-      );
+      await ctx.reply(`✅ **Avto-javob matningiz saqlandi va yoqildi!**\n\nYangi matn:\n"${text}"`, { reply_markup: mainMenuKeyboard });
       return;
     }
-  } catch (error) {
-    logger.error(`Instruction text error: ${error.message}`);
-  }
 
-  return next();
-}, chatHandler);
+    const mode = user?.currentMode || "ai_chat";
+
+    // 2. Rasm Yaratish Rejimi (DALL-E)
+    if (mode === "image_gen") {
+      const waitMsg = await ctx.reply("🎨 Rasm yaratilmoqda, iltimos kuting...");
+      const imageUrl = await generateImage(text);
+      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+      
+      if (imageUrl) {
+        await ctx.replyWithPhoto(imageUrl, { caption: "🎨 AI tomonidan yaratilgan rasm!", reply_markup: mainMenuKeyboard });
+      } else {
+        await ctx.reply("❌ Rasm yaratishda xatolik yuz berdi.", { reply_markup: mainMenuKeyboard });
+      }
+      return;
+    }
+
+    // 3. Claude AI Rejimi
+    if (mode === "claude") {
+      const waitMsg = await ctx.reply("🧠 Claude AI tahlil qilmoqda, biroz kuting...");
+      const claudeReply = await queryClaude(text) || "Claude AI javob berishda xatolik yuz berdi.";
+      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+
+      await Memory.create({ telegramId: userId, role: "user", content: text });
+      await Memory.create({ telegramId: userId, role: "assistant", content: claudeReply });
+      await ctx.reply(claudeReply, { reply_markup: mainMenuKeyboard });
+      return;
+    }
+
+    let systemInstruction = "";
+
+    // 4. Har bir rejim uchun qat'iy ko'rsatmalar
+    if (mode === "movie") {
+      systemInstruction = `Sen professional kino ekspertisan. Foydalanuvchi qaysi kino yoki serial nomini yozsa, FAQAT VA FAQAT O'SHA kino haqida aniq va to'liq ma'lumot ber (kino nomi, yili, rejissyori, mazmuni). Boshqa kinolarni o'zingdan o'ylab topib aralashtirma.`;
+    } else if (mode === "search") {
+      systemInstruction = "Sen internet qidiruv assistentisan. Foydalanuvchi so'ragan savol bo'yicha internetdagi eng aniq faktlarni taqdim et.";
+    } else if (mode === "coding") {
+      systemInstruction = "Sen tajribali dasturlash assistentisan. Kod yozish va xatolarni to'g'rilashda yordam ber.";
+    } else if (mode === "translate") {
+      systemInstruction = "Sen professional tarjimonsan. Berilgan matnni boshqa tilga xatosiz tarjima qil.";
+    } else if (mode === "mod_games") {
+      systemInstruction = "Sen mobil o'yinlar va modlar bo'yicha mutaxassissansan. O'yinlar haqida ma'lumot ber.";
+    } else {
+      systemInstruction = "Sen Telegram botdagi shaxsiy AI yordamchisan. Savollarga qisqa, aniq va do'stona javob ber.";
+    }
+
+    // Xotiraga saqlash
+    await Memory.create({ telegramId: userId, role: "user", content: text });
+
+    const promptMessages = [
+      { role: "system", content: systemInstruction },
+      { role: "user", content: text }
+    ];
+
+    // AI orqali javob olish
+    const aiReply = await queryAI(promptMessages, user?.language || "uz") || "Javob olishda xatolik yuz berdi.";
+
+    await Memory.create({ telegramId: userId, role: "assistant", content: aiReply });
+
+    await ctx.reply(aiReply, { reply_markup: mainMenuKeyboard });
+
+  } catch (error) {
+    logger.error(`Text message error: ${error.message}`);
+    await ctx.reply("❌ Xatolik yuz berdi, qaytadan urinib ko'ring.", { reply_markup: mainMenuKeyboard });
+  }
+});
 
 bot.catch((err) => {
   logger.error(`Global Bot Error: ${err.message}`);
@@ -506,4 +597,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with advance AI logic & design");
+logger.info("Telegram Bot successfully started with strictly separated modes!");
