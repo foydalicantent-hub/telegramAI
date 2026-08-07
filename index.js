@@ -116,41 +116,57 @@ bot.hears("⚙️ Sozlamalar", async (ctx) => {
   await ctx.reply("⚙️ Botning umumiy sozlamalari va til parametrlarini shu yerdan boshqarasiz.", { reply_markup: mainMainMenu });
 });
 
-bot.hears("📜 Muloqot Tarixi", async (ctx) => {
+// XATOSIZ ISHLOVCHI HISTORICAL/MULIQOT TARIXI
+async function showHistory(ctx) {
   try {
     const userId = ctx.from.id;
-    const memories = await Memory.find({ telegramId: userId, content: { $regex: /Mijoz ID/ } }).sort({ createdAt: -1 });
+    const memories = await Memory.find({ telegramId: userId }).sort({ createdAt: -1 }).limit(50);
 
     if (!memories || memories.length === 0) {
       await ctx.reply("📂 Hozircha saqlangan muloqot tarixi yo'q.", { reply_markup: mainMainMenu });
       return;
     }
 
+    let text = "📋 **Mijozlar va Muloqot Tarixi:**\n\n";
+    let index = 1;
     const uniqueClients = new Map();
+
     memories.forEach(m => {
-      const match = m.content.match(/Mijoz ID: (\d+)/);
-      const nameMatch = m.content.match(/Ism: ([^\]]+)/);
-      if (match && match[1]) {
-        const clientId = match[1];
-        const clientName = nameMatch ? nameMatch[1].trim() : "Noma'lum";
-        if (!uniqueClients.has(clientId)) {
-          uniqueClients.set(clientId, { name: clientName, clientId: clientId, date: new Date(m.createdAt).toLocaleString() });
+      if (m.content) {
+        const match = m.content.match(/Mijoz ID: (\d+)/);
+        const nameMatch = m.content.match(/Ism: ([^\]]+)/);
+        if (match && match[1]) {
+          const clientId = match[1];
+          const clientName = nameMatch ? nameMatch[1].trim() : "Mijoz";
+          if (!uniqueClients.has(clientId)) {
+            uniqueClients.set(clientId, { name: clientName, date: new Date(m.createdAt).toLocaleString() });
+          }
         }
       }
     });
 
-    let text = "📋 **Mijozlar tarixi va kontaktlar:**\n\n";
-    let index = 1;
-    for (const [clientId, info] of uniqueClients) {
-      text += `${index}. 👤 **Ism:** ${info.name}\n   🆔 **ID:** <code>${clientId}</code>\n   📅 Oxirgi murojaat: ${info.date}\n\n`;
-      index++;
+    if (uniqueClients.size === 0) {
+      // Agar biznes mijozlar bo'lmasa, oddiy oxirgi xabarlarni chiqaradi
+      text = "📋 **Oxirgi muloqotlar tarixi:**\n\n";
+      memories.slice(0, 10).forEach((m, i) => {
+        text += `${i + 1}. [${m.role.toUpperCase()}] ${m.content.substring(0, 60)}...\n`;
+      });
+    } else {
+      for (const [clientId, info] of uniqueClients) {
+        text += `${index}. 👤 **Ism:** ${info.name}\n   🆔 **ID:** <code>${clientId}</code>\n   📅 Vaqt: ${info.date}\n\n`;
+        index++;
+      }
     }
+
     await ctx.reply(text, { parse_mode: "HTML", reply_markup: mainMainMenu });
   } catch (err) {
     logger.error(`History error: ${err.message}`);
     await ctx.reply("❌ Tarixni olishda xatolik yuz berdi.", { reply_markup: mainMainMenu });
   }
-});
+}
+
+bot.hears("📜 Muloqot Tarixi", showHistory);
+bot.command(["history", "istorya"], showHistory);
 
 bot.hears("🤖 Bot haqida ma'lumot", async (ctx) => {
   await ctx.reply("🤖 Ushbu bot Telegram Business avtomatlashuvi, AI va media tahrirlash xizmatlarini taqdim etadi.", { reply_markup: mainMainMenu });
@@ -337,4 +353,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram AI Bot started with structured menus");
+logger.info("Telegram AI Bot started successfully");
