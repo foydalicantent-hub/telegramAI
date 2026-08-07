@@ -37,6 +37,8 @@ await bot.api.setMyCommands([
   { command: "help", description: "Yordam va ko'rsatmalar" },
   { command: "clean", description: "Muloqot tarixini tozalash" },
   { command: "history", description: "Mijozlar tarixi" },
+  { command: "about", description: "Bot haqida ma'lumot" },
+  { command: "muammo", description: "Nosozlik haqida xabar berish" },
 ]);
 
 // ================= KLAVIATURALAR VA MENYULAR =================
@@ -98,7 +100,7 @@ const submenu4Keyboard = {
   resize_keyboard: true
 };
 
-// ================= START VA TIL TANLASH =================
+// ================= START VA BUYRUQLAR =================
 
 bot.command("start", async (ctx) => {
   await ctx.reply(
@@ -109,6 +111,18 @@ bot.command("start", async (ctx) => {
       parse_mode: "Markdown",
       reply_markup: languageKeyboard
     }
+  );
+});
+
+bot.command("help", helpCommand);
+bot.command("clean", cleanCommand);
+bot.command("muammo", muammoCommand);
+bot.command("grant", grantCommand);
+
+bot.command("about", async (ctx) => {
+  await ctx.reply(
+    "🤖 **Bot Haqida Ma'lumot**\n\nUshbu bot sizga AI muloqot, kino va internet qidiruv hamda Telegram Biznes assistent xizmatlarini taqdim etadi.",
+    { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
   );
 });
 
@@ -361,14 +375,19 @@ bot.on("message:contact", async (ctx) => {
 
 bot.on("message:video", async (ctx) => {
   try {
-    const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...");
-    try {
-      await ctx.replyWithVideoNote(ctx.message.video.file_id);
-      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-    } catch (err) {
-      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-      await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Videongiz yuklandi!" });
+    const user = await User.findOne({ telegramId: ctx.from.id });
+    if (user && user.currentMode === "video_note") {
+      const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...", { reply_markup: mainMenuKeyboard });
+      try {
+        await ctx.replyWithVideoNote(ctx.message.video.file_id);
+        await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+      } catch (err) {
+        await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+        await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Videongiz yuklandi!" });
+      }
+      return;
     }
+    await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Siz yuborgan video", reply_markup: mainMenuKeyboard });
   } catch (error) {
     logger.error(`Video handler error: ${error.message}`);
   }
