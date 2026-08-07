@@ -99,7 +99,7 @@ const submenu4Keyboard = {
   resize_keyboard: true
 };
 
-// ================= BUYRUQLAR =================
+// ================= START VA BUYRUQLAR =================
 
 bot.command("start", async (ctx) => {
   await ctx.reply(
@@ -145,7 +145,7 @@ bot.hears("🔙 Ortga", async (ctx) => {
   await ctx.reply("🏠 **Asosiy menyuga qaytdingiz:**", { reply_markup: mainMenuKeyboard });
 });
 
-// ================= REJIMLARNI YOQISH (CURRENT MODE) =================
+// ================= BO'LIMLAR REJIMLARI =================
 
 bot.hears("🌐 AI va Qidiruv", async (ctx) => {
   await ctx.reply("🌐 **AI va Qidiruv bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu1Keyboard });
@@ -166,6 +166,7 @@ bot.hears("🎬 Kino Topish", async (ctx) => {
   await ctx.reply("🎬 **Kino Topish:**\nQaysi kino yoki serialni ko'rmoqchisiz? Nomini yozing:", { reply_markup: submenu1Keyboard });
 });
 
+// QOLGAN MENYULAR
 bot.hears("🎥 Media va Yaratish", async (ctx) => {
   await ctx.reply("🎥 **Media va Yaratish bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu2Keyboard });
 });
@@ -482,7 +483,7 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
-// ================= MATNLI XABARLAR VA QAT'IY REJIMLAR =================
+// ================= MATNLI XABARLAR (ASOSIY REJIMLAR BOSHQaruvi) =================
 
 bot.on("message:text", async (ctx) => {
   try {
@@ -494,7 +495,6 @@ bot.on("message:text", async (ctx) => {
       user = await User.create({ telegramId: userId, currentMode: "ai_chat" });
     }
 
-    // 1. Biznes tahrirlash holati
     if (user.waitingForInstruction) {
       user.businessInstruction = text;
       user.waitingForInstruction = false;
@@ -507,7 +507,6 @@ bot.on("message:text", async (ctx) => {
 
     const mode = user.currentMode || "ai_chat";
 
-    // 2. Rasm Yaratish Rejimi (DALL-E)
     if (mode === "image_gen") {
       const waitMsg = await ctx.reply("🎨 Rasm yaratilmoqda, iltimos kuting...");
       const imageUrl = await generateImage(text);
@@ -521,38 +520,34 @@ bot.on("message:text", async (ctx) => {
       return;
     }
 
-    // 3. Claude AI Rejimi
     if (mode === "claude") {
       const waitMsg = await ctx.reply("🧠 Claude AI tahlil qilmoqda, biroz kuting...");
-      
       await Memory.create({ telegramId: userId, role: "user", content: text });
       const claudeReply = await queryClaude(text) || "Claude AI javob berishda xatolik yuz berdi.";
-      
       await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
       await Memory.create({ telegramId: userId, role: "assistant", content: claudeReply });
-      
       await ctx.reply(claudeReply, { parse_mode: "Markdown", reply_markup: mainMenuKeyboard });
       return;
     }
 
     let systemInstruction = "";
 
-    // 4. Boshqa rejimlarni qat'iy boshqarish
+    // KINO VA INTERNET QIDIRUV REJIMLARI
     if (mode === "movie") {
-      systemInstruction = `Sen professional kino qidiruv assistentisan. Foydalanuvchi qaysi kino yoki serial nomini yozsa, o'sha kino haqida batafsil ma'lumot, chiqarilgan yili, rejissyori, mazmuni hamda onlayn ko'rish va yuklab olish uchun aniq havolalarni (masalan, Uzmovi yoki YouTube treyleri havolalarini) taqdim et.`;
+      systemInstruction = `Sen professional kino qidiruv botisan. Foydalanuvchi qaysi kino yoki serial nomini yozsa, o'sha kino haqida batafsil ma'lumot ber va uni topish/ko'rish uchun ishonchli manbalar/havolalarni taqdim et.`;
     } else if (mode === "search") {
-      systemInstruction = "Sen internet qidiruv assistentisan. Foydalanuvchi so'ragan mavzu yoki savol bo'yicha internetdagi eng aniq va so'nggi faktlarni, ma'lumotlarni batafsil yoritib ber.";
+      systemInstruction = "Sen internet qidiruv assistentisan. Foydalanuvchi so'ragan mavzu yoki savol bo'yicha internetdagi eng aniq faktlarni va batafsil ma'lumotlarni yoritib ber.";
     } else if (mode === "coding") {
-      systemInstruction = "Sen tajribali dasturlash assistentisan. Kod yozish, tahlil qilish va xatolarni to'g'rilashda yordam ber.";
+      systemInstruction = "Sen tajribali dasturlash assistentisan. Kod yozish va xatolarni to'g'rilashda yordam ber.";
     } else if (mode === "translate") {
-      systemInstruction = "Sen professional tarjimonsan. Berilgan matnni boshqa tilga xatosiz va tushunarli tarjima qil.";
+      systemInstruction = "Sen professional tarjimonsan. Berilgan matnni boshqa tilga xatosiz tarjima qil.";
     } else if (mode === "mod_games") {
-      systemInstruction = "Sen mobil o'yinlar va modlar bo'yicha yordamchisan. O'yinlar haqida batafsil ma'lumot va ularning yuklash linklarini topib ber.";
+      systemInstruction = "Sen mobil o'yinlar bo'yicha yordamchisan. O'yinlar haqida ma'lumot va mod linklarini ber.";
     } else {
       systemInstruction = "Sen Telegram botdagi shaxsiy AI yordamchisan. Savollarga qisqa, aniq va do'stona javob ber.";
     }
 
-    // Xotiraga saqlash
+    // Xotiraga yozish va AI dan javob olish
     await Memory.create({ telegramId: userId, role: "user", content: text });
 
     const promptMessages = [
@@ -560,7 +555,6 @@ bot.on("message:text", async (ctx) => {
       { role: "user", content: text }
     ];
 
-    // AI orqali javob olish
     const aiReply = await queryAI(promptMessages, user.language || "uz") || "Javob olishda xatolik yuz berdi.";
 
     await Memory.create({ telegramId: userId, role: "assistant", content: aiReply });
@@ -582,4 +576,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with movie and search modes fixed!");
+logger.info("Telegram Bot successfully started with core features working!");
