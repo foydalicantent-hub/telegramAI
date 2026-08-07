@@ -1,14 +1,9 @@
 import { Keyboard } from "grammy";
 
 export const mainMenuKeyboard = new Keyboard()
-  .text("🤖 AI Chat")
-  .text("🎬 Kino Qidirish")
+  .text("🌐 AI va Qidiruv").text("🎥 Media va Yaratish")
   .row()
-  .text("🔍 Internet Qidiruv")
-  .text("🔴 Dumaloq Video")
+  .text("💻 Kod va Instrumentlar").text("⚡️ Biznes Avto-javob")
   .row()
-  .text("📜 Muloqot Tarixi")
-  .text("⚙️ Sozlamalar")
-  .row()
-  .text("📞 Avto-javob sozlash (Kontakt yuborish)") // Oddiy matnli tugma sifatida menyuga qo'shamiz
+  .text("📜 Muloqot Tarixi").text("✨ Tez kunda (Bo'sh)")
   .resized();
