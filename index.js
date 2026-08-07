@@ -484,7 +484,7 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
-// ================= MATNLI XABARLAR VA QAT'IY AJratilgan REJIMLAR =================
+// ================= MATNLI XABARLAR VA QAT'IY AJRATILGAN REJIMLAR =================
 
 bot.on("message:text", async (ctx, next) => {
   try {
@@ -536,12 +536,12 @@ bot.on("message:text", async (ctx, next) => {
     // 4. Qolgan rejimlarni qat'iy va aniq taqsimlash
     if (mode === "movie") {
       promptMessages = [
-        { role: "system", content: "Sen kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi so'ragan kino, serial yoki uning tarjima qilingan nomini, mazmunini va qayerdan topish mumkinligini aniq tushuntirib ber." },
+        { role: "system", content: "Sen professional kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi so'ragan kino yoki serial haqida to'liq ma'lumot, chiqarilgan yili, mazmuni va ko'rish havolasini ber." },
         { role: "user", content: text }
       ];
     } else if (mode === "search") {
       promptMessages = [
-        { role: "system", content: "Sen internet qidiruv yordamchisisan. Berilgan so'rov bo'yicha internetdan olingandek eng aniq, so'nggi ma'lumotlarni topib ber." },
+        { role: "system", content: "Sen professional internet qidiruv assistentisan. Foydalanuvchi so'ragan har qanday savol (ob-havo, yangiliklar, faktlar va hokazo) bo'yicha eng aniq, batafsil va so'nggi ma'lumotlarni taqdim et." },
         { role: "user", content: text }
       ];
     } else if (mode === "coding") {
