@@ -45,7 +45,7 @@ bot.command("clean", cleanCommand);
 bot.command("muammo", muammoCommand);
 bot.command("grant", grantCommand);
 
-// ASOSIY 6 TALIK MENYU KLAVIATURASI
+// ================= ASOSIY 6 TA TUGMALI MENYU =================
 const mainMainMenu = {
   keyboard: [
     [{ text: "🌐 AI, Qidiruv va Tarjima" }],
@@ -60,16 +60,16 @@ bot.hears("🔙 Asosiy menyu", async (ctx) => {
   await ctx.reply("🏠 Asosiy menyudasiz. Kerakli bo'limni tanlang:", { reply_markup: mainMainMenu });
 });
 
-// ================= 1-TUGMA: AI, Qidiruv va Tarjima =================
+// ================= 1-TUGMA: AI Chat, Internet qidiruv, Tarjima, Kino qidirish =================
 bot.hears("🌐 AI, Qidiruv va Tarjima", async (ctx) => {
   await ctx.reply(
-    "🌐 **AI, Qidiruv va Tarjima bo'limi**\n\nKerakli funksiyani tanlang yoki savolingizni yuboring:",
+    "🌐 **AI, Qidiruv va Tarjima bo'limi**\n\nQuyidagi funksiyalardan birini tanlang:",
     {
       parse_mode: "Markdown",
       reply_markup: {
         keyboard: [
-          [{ text: "🤖 AI Chat" }, { text: "🎬 Kino Qidirish" }],
-          [{ text: "🔍 Internet Qidiruv" }, { text: "🌐 Tarjima qilish" }],
+          [{ text: "🤖 AI Chat" }, { text: "🔍 Internet Qidiruv" }],
+          [{ text: "🌐 Tarjima" }, { text: "🎬 Kino Qidirish" }],
           [{ text: "🔙 Asosiy menyu" }]
         ],
         resize_keyboard: true
@@ -79,31 +79,31 @@ bot.hears("🌐 AI, Qidiruv va Tarjima", async (ctx) => {
 });
 
 bot.hears("🤖 AI Chat", async (ctx) => {
-  await ctx.reply("💬 AI Chat rejimi faol. Menga istalgan savolingizni yuboring:", { reply_markup: mainMainMenu });
+  await ctx.reply("💬 AI Chat rejimi yoqildi. Istalgan savolingizni yuboring:", { reply_markup: mainMainMenu });
+});
+
+bot.hears("🔍 Internet Qidiruv", async (ctx) => {
+  await ctx.reply("🔍 Internetdan qidirish uchun so'rov yuboring:", { reply_markup: mainMainMenu });
+});
+
+bot.hears("🌐 Tarjima", async (ctx) => {
+  await ctx.reply("🌐 Tarjima qilinishi kerak bo'lgan matnni yuboring:", { reply_markup: mainMainMenu });
 });
 
 bot.hears("🎬 Kino Qidirish", async (ctx) => {
   await ctx.reply("🎬 Qaysi kinoni qidiryapsiz? Kino nomini yuboring:", { reply_markup: mainMainMenu });
 });
 
-bot.hears("🔍 Internet Qidiruv", async (ctx) => {
-  await ctx.reply("🔍 Internetdan nima qidirish kerak? So'rovni yuboring:", { reply_markup: mainMainMenu });
-});
-
-bot.hears("🌐 Tarjima qilish", async (ctx) => {
-  await ctx.reply("🌐 Tarjima qilinishi kerak bo'lgan matnni yuboring:", { reply_markup: mainMainMenu });
-});
-
-// ================= 2-TUGMA: Sozlamalar va Tarix =================
+// ================= 2-TUGMA: Sozlamalar, Muloqot tarixi, Bot haqida, Savollarga javoblar =================
 bot.hears("⚙️ Sozlamalar va Tarix", async (ctx) => {
   await ctx.reply(
-    "⚙️ **Sozlamalar va Tarix bo'limi**\n\nKerakli tugmani bosing:",
+    "⚙️ **Sozlamalar va Tarix bo'limi**\n\nKerakli bo'limni tanlang:",
     {
       parse_mode: "Markdown",
       reply_markup: {
         keyboard: [
-          [{ text: "⚙️ Sozlamalar" }, { text: "📜 Muloqot Tarixi" }],
-          [{ text: "🤖 Bot haqida ma'lumot" }, { text: "❓ Savollarga javoblar" }],
+          [{ text: "⚙️ Umumiy Sozlamalar" }, { text: "📜 Muloqot Tarixi" }],
+          [{ text: "🤖 Bot haqida ma'lumot" }, { text: "❓ Bot haqida savollar va javoblar" }],
           [{ text: "🔙 Asosiy menyu" }]
         ],
         resize_keyboard: true
@@ -112,11 +112,11 @@ bot.hears("⚙️ Sozlamalar va Tarix", async (ctx) => {
   );
 });
 
-bot.hears("⚙️ Sozlamalar", async (ctx) => {
+bot.hears("⚙️ Umumiy Sozlamalar", async (ctx) => {
   await ctx.reply("⚙️ Botning umumiy sozlamalari va til parametrlarini shu yerdan boshqarasiz.", { reply_markup: mainMainMenu });
 });
 
-// XATOSIZ ISHLOVCHI HISTORICAL/MULIQOT TARIXI
+// Xatosiz ishlaydigan Muloqot tarixi / history funksiyasi
 async function showHistory(ctx) {
   try {
     const userId = ctx.from.id;
@@ -146,8 +146,7 @@ async function showHistory(ctx) {
     });
 
     if (uniqueClients.size === 0) {
-      // Agar biznes mijozlar bo'lmasa, oddiy oxirgi xabarlarni chiqaradi
-      text = "📋 **Oxirgi muloqotlar tarixi:**\n\n";
+      text = "📋 **Oxirgi xabarlar tarixi:**\n\n";
       memories.slice(0, 10).forEach((m, i) => {
         text += `${i + 1}. [${m.role.toUpperCase()}] ${m.content.substring(0, 60)}...\n`;
       });
@@ -169,37 +168,37 @@ bot.hears("📜 Muloqot Tarixi", showHistory);
 bot.command(["history", "istorya"], showHistory);
 
 bot.hears("🤖 Bot haqida ma'lumot", async (ctx) => {
-  await ctx.reply("🤖 Ushbu bot Telegram Business avtomatlashuvi, AI va media tahrirlash xizmatlarini taqdim etadi.", { reply_markup: mainMainMenu });
+  await ctx.reply("🤖 Ushbu bot Telegram Business avtomatlashuvi, AI va media tahrirlash xizmatlarini taqdim etuvchi yordamchidir.", { reply_markup: mainMainMenu });
 });
 
-bot.hears("❓ Savollarga javoblar", async (ctx) => {
+bot.hears("❓ Bot haqida savollar va javoblar", async (ctx) => {
   await ctx.reply("❓ Bot bo'yicha ko'p beriladigan savollar va ularning javoblari shu yerda joylashgan.", { reply_markup: mainMainMenu });
 });
 
-// ================= 3-TUGMA: Media va Yaratish =================
+// ================= 3-TUGMA: Dumaloq video, Rasm o'qish, Video o'qish, Rasm yaratish =================
 bot.hears("🎥 Media va Yaratish", async (ctx) => {
   await ctx.reply(
     "🎥 **Media va Yaratish bo'limi**\n\n" +
-    "• **🔴 Dumaloq Video** qilish uchun video yuboring\n" +
+    "• **🔴 Dumaloq video qilish** uchun video yuboring\n" +
     "• **🖼 Rasm o'qish** uchun rasm yuboring\n" +
     "• **🎞 Video o'qish** uchun video yuboring\n" +
-    "• **🎨 Rasm yaratish** so'rovini yuboring\n\n" +
-    "👇 Kerakli faylni botga tashlang:",
+    "• **🎨 Rasm yaratish** uchun matnli so'rov yuboring\n\n" +
+    "👇 Kerakli fayl yoki so'rovni yuboring:",
     { parse_mode: "Markdown", reply_markup: mainMainMenu }
   );
 });
 
-// ================= 4-TUGMA: Biznes Avto-javob Sozlash =================
+// ================= 4-TUGMA: Avto-javobni o'chirish/yoqish, Matnni tahrirlash, Sozlamalar =================
 bot.hears("🤖 Biznes Avto-javob", async (ctx) => {
   await ctx.reply(
-    "🤖 **Telegram Business Avto-javob Sozlamalari**\n\nBu yerdan avto-javobni yoqishingiz, o'chirishingiz, matnni tahrirlashingiz va kontakt ulashingiz mumkin:",
+    "🤖 **Telegram Business Avto-javob Sozlamalari**\n\n" +
+    "Bu bo'limda avto-javobni yoqishingiz, o'chirishingiz, kiritgan matningizni tahrirlashingiz va kontakt ulashingiz mumkin:",
     {
       parse_mode: "Markdown",
       reply_markup: {
         keyboard: [
           [{ text: "🟢 Avto-javobni yoqish" }, { text: "🔴 Avto-javobni o'chirish" }],
-          [{ text: "✏️ Kiritilgan matnni tahrirlash" }],
-          [{ text: "📞 Kontakt ulashish", request_contact: true }],
+          [{ text: "✏️ Kiritgan matnni tahrirlash" }, { text: "📞 Kontakt ulashish", request_contact: true }],
           [{ text: "🔙 Asosiy menyu" }]
         ],
         resize_keyboard: true
@@ -226,24 +225,24 @@ bot.hears("🔴 Avto-javobni o'chirish", async (ctx) => {
   } catch (err) { logger.error(err.message); }
 });
 
-bot.hears("✏️ Kiritilgan matnni tahrirlash", async (ctx) => {
+bot.hears("✏️ Kiritgan matnni tahrirlash", async (ctx) => {
   await User.findOneAndUpdate({ telegramId: ctx.from.id }, { waitingForInstruction: true }, { upsert: true });
-  await ctx.reply("📝 Mijozlarga birinchi bo'lib yuboriladigan yangi matningizni yuboring:", { parse_mode: "Markdown", reply_markup: mainMainMenu });
+  await ctx.reply("📝 Mijozlarga birinchi bo'lib yuborilishi kerak bo'lgan yangi matningizni yuboring:", { parse_mode: "Markdown", reply_markup: mainMainMenu });
 });
 
-// ================= 5-TUGMA: Kod va Claude AI =================
+// ================= 5-TUGMA: Kod yozish, Fayl tashlash va o'qish/tushuntirish, Claude AI =================
 bot.hears("💻 Kod va Claude AI", async (ctx) => {
   await ctx.reply(
     "💻 **Kod va Claude AI bo'limi**\n\n" +
     "• **Kod yozish** va dasturlash bo'yicha yordam\n" +
-    "• **Fayl tashlash va o'qish / tushuntirish**\n" +
+    "• **Fayl tashlash va o'qish** hamda tushuntirish\n" +
     "• **Claude AI** imkoniyatlari\n\n" +
     "📝 Savolingizni, kodingizni yoki faylingizni yuboring:",
     { parse_mode: "Markdown", reply_markup: mainMainMenu }
   );
 });
 
-// ================= 6-TUGMA: Tez kunda =================
+// ================= 6-TUGMA: ✨ Tez kunda (Bo'sh) =================
 bot.hears("✨ Tez kunda (Bo'sh)", async (ctx) => {
   await ctx.reply("✨ Hali bo'sh", { parse_mode: "Markdown", reply_markup: mainMainMenu });
 });
@@ -253,7 +252,7 @@ bot.on("message:contact", async (ctx) => {
   const contact = ctx.message.contact;
   if (contact && contact.phone_number) {
     await User.findOneAndUpdate({ telegramId: ctx.from.id }, { phoneNumber: contact.phone_number, autoReplyActive: true }, { upsert: true });
-    await ctx.reply("✅ Telefon raqamingiz saqlandi va avto-javob yoqildi!", { reply_markup: mainMainMenu });
+    await ctx.reply("✅ Telefon raqamingiz saqlandi va avto-javob faollashtirildi!", { reply_markup: mainMainMenu });
   }
 });
 
@@ -353,4 +352,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram AI Bot started successfully");
+logger.info("Telegram AI Bot started with complete submenus");
