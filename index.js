@@ -21,7 +21,7 @@ await connectDB();
 
 const bot = new Bot(config.botToken);
 
-// Render port xatoligining oldini olish uchun HTTP server
+// Render serverini ushlab turish uchun HTTP server
 const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("Bot is running smoothly!");
@@ -32,9 +32,9 @@ server.listen(PORT, () => {
   logger.info(`HTTP server is listening on port ${PORT}`);
 });
 
-// Professional menyu buyruqlari
+// Professional Menyu Buyruqlari
 await bot.api.setMyCommands([
-  { command: "start", description: "🔄 Botni qayta ishga tushirish va tilni tanlash" },
+  { command: "start", description: "🔄 Botni ishga tushirish va tilni tanlash" },
   { command: "settings", description: "⚙️ Bot sozlamalari va avto-javob" },
   { command: "history", description: "📋 Mijozlar va muloqot tarixi" },
   { command: "clean", description: "🧹 Muloqot tarixini tozalash" },
@@ -50,7 +50,7 @@ bot.command("muammo", muammoCommand);
 bot.command("grant", grantCommand);
 
 bot.command("settings", async (ctx) => {
-  await ctx.reply("⚙️ Sozlamalar bo'limiga xush kelibsiz. Quyidagi tugmalar orqali boshqaring:", { reply_markup: mainMenuKeyboard });
+  await ctx.reply("⚙️ Sozlamalar bo'limiga xush kelibsiz. Quyidagi menyudan foydalaning:", { reply_markup: mainMenuKeyboard });
 });
 
 bot.command("support", async (ctx) => {
@@ -69,7 +69,7 @@ const languageKeyboard = {
   ]
 };
 
-// Asosiy Menyu (5 ta asosiy bo'lim + tez kunda)
+// Asosiy Menyu (Rasmda ko'rsatilgan 6 ta asosiy tugma)
 const mainMenuKeyboard = {
   keyboard: [
     [{ text: "🌐 AI va Qidiruv" }, { text: "🎥 Media va Yaratish" }],
@@ -79,7 +79,7 @@ const mainMenuKeyboard = {
   resize_keyboard: true
 };
 
-// 1-Bo'lim: AI va Qidiruv (Ortga tugmasi bilan)
+// 1-Bo'lim Sub-menyusi
 const submenu1Keyboard = {
   keyboard: [
     [{ text: "🤖 AI Chat" }, { text: "🔍 Internet Qidiruv" }],
@@ -89,7 +89,7 @@ const submenu1Keyboard = {
   resize_keyboard: true
 };
 
-// 2-Bo'lim: Media va Yaratish (Ortga tugmasi bilan)
+// 2-Bo'lim Sub-menyusi
 const submenu2Keyboard = {
   keyboard: [
     [{ text: "🎨 Rasm Yaratish" }, { text: "🖼 Rasm va Video O'qish" }],
@@ -99,7 +99,7 @@ const submenu2Keyboard = {
   resize_keyboard: true
 };
 
-// 3-Bo'lim: Kod va Instrumentlar (Ortga tugmasi bilan)
+// 3-Bo'lim Sub-menyusi
 const submenu3Keyboard = {
   keyboard: [
     [{ text: "💻 Kod Yozish" }, { text: "🧠 Claude AI" }],
@@ -110,7 +110,7 @@ const submenu3Keyboard = {
   resize_keyboard: true
 };
 
-// 4-Bo'lim: Biznes Avto-javob va Mijozlar tarixi (Ortga tugmasi bilan)
+// 4-Bo'lim Sub-menyusi (Biznes Avto-javob)
 const submenu4Keyboard = {
   keyboard: [
     [{ text: "📞 Kontakt ulashish", request_contact: true }],
@@ -258,7 +258,7 @@ bot.hears("✏️ Matnni Tahrirlash", async (ctx) => {
   await ctx.reply("📝 **Mijozlarga 1-marta yuboriladigan javob matnini yuboring:**\n(Masalan: *Hozir bandman, tez orada javob beraman*)", { reply_markup: submenu4Keyboard });
 });
 
-// 📋 MIJOZLAR TARIXI (BIZNES - FAQAT EGASIGA KO'RINADI)
+// 📋 BIZNES MIJOZLAR TARIXI (FAQAT EGASIGA KO'RINADI)
 bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
   try {
     const userId = ctx.from.id;
@@ -312,9 +312,9 @@ bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
   }
 });
 
-// ================= 5-BO'LIM: MULOQOT TARIXI (UMUMIY) =================
+// ================= 5-BO'LIM: MULOQOT TARIXI (FAQAT SHU YER BOSILGANDA CHIQADI) =================
 
-bot.hears("📜 Muloqot Tarixi", async (ctx) => {
+async function showGeneralHistory(ctx) {
   try {
     const userId = ctx.from.id;
     const memories = await Memory.find({ telegramId: userId, role: { $ne: "owner_reply" } })
@@ -337,7 +337,10 @@ bot.hears("📜 Muloqot Tarixi", async (ctx) => {
     logger.error(`General history error: ${err.message}`);
     await ctx.reply("❌ Muloqot tarixini ko'rsatishda xatolik yuz berdi.", { reply_markup: mainMenuKeyboard });
   }
-});
+}
+
+bot.hears("📜 Muloqot Tarixi", showGeneralHistory);
+bot.command(["history", "istorya"], showGeneralHistory);
 
 // ================= 6-BO'LIM: TEZ KUNDA =================
 
@@ -372,7 +375,7 @@ bot.on("message:contact", async (ctx) => {
   }
 });
 
-// ================= BIZNES XABARLAR VA AI 3-MARTALIK QO'RIQLASH LOGIKASI =================
+// ================= BIZNES XABARLAR & 3 MARTALIK AI LIMIT LOGIKASI =================
 
 bot.on("business_connection", async (ctx) => {
   try {
@@ -409,7 +412,7 @@ bot.on("business_message", async (ctx) => {
 
     if (!owner || owner.autoReplyActive === false) return;
 
-    // 1. Agar egasi javob yozsa (Outgoing), hisoblagich noldan boshlanishi uchun 'owner_reply' yozamiz
+    // 1. Agar egasi javob yozsa (Outgoing), hisoblagich nolga tushadi
     if (message.is_outgoing || (message.from && message.from.id === owner.telegramId)) {
       await Memory.create({
         telegramId: owner.telegramId,
@@ -438,13 +441,8 @@ bot.on("business_message", async (ctx) => {
 
     const aiRepliesCount = await Memory.countDocuments(filter);
 
-    // 3. AI 3 marta javob bergach, egasi yozguncha to'xtaydi
+    // 3. AI 3 marta yozgandan keyin egasi yozguncha to'xtaydi (Chatga spam qilmaydi)
     if (aiRepliesCount >= 3) {
-      await bot.api.sendMessage(
-        owner.telegramId,
-        `📩 **Mijoz yozdi (AI to'xtatilgan, 3 ta javob tugadi):**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n💬 **Xabar:** "${text}"`,
-        { parse_mode: "HTML" }
-      ).catch(() => {});
       return;
     }
 
@@ -472,18 +470,12 @@ bot.on("business_message", async (ctx) => {
 
     await ctx.reply(finalReply, { business_connection_id: message.business_connection_id });
 
-    await bot.api.sendMessage(
-      owner.telegramId,
-      `💬 **Biznes Yozishuv:**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n📥 **U yozdi:** "${text}"\n📤 **AI Javobi (${aiRepliesCount + 1}/3):** "${finalReply}"`,
-      { parse_mode: "HTML" }
-    ).catch(() => {});
-
   } catch (error) {
     logger.error(`Business message error: ${error.message}`);
   }
 });
 
-// ================= MEDIA VA FAYLLAR =================
+// ================= MEDIA VA FAYLLARNI QABUL QILISH =================
 
 bot.on("message:video", async (ctx) => {
   try {
@@ -506,6 +498,10 @@ bot.on("message:photo", async (ctx) => {
 
 bot.on("message:document", async (ctx) => {
   await ctx.reply("📁 **Hujjat qabul qilindi.** O'qilib, tahlil qilinmoqda...", { reply_markup: mainMenuKeyboard });
+});
+
+bot.on("message:voice", async (ctx) => {
+  await ctx.reply("🎤 **Ovozli xabar qabul qilindi.**", { reply_markup: mainMenuKeyboard });
 });
 
 // ================= MATNLI XABARLAR VA TAHRIRLASH =================
@@ -540,4 +536,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with all features & updated commands");
+logger.info("Telegram Bot 500+ lines fully loaded with submenus and complete design");
