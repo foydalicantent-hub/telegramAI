@@ -21,7 +21,7 @@ await connectDB();
 
 const bot = new Bot(config.botToken);
 
-// Render portini ushlab turuvchi HTTP server
+// Render port xatoligining oldini olish uchun HTTP server
 const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("Bot is running smoothly!");
@@ -32,16 +32,33 @@ server.listen(PORT, () => {
   logger.info(`HTTP server is listening on port ${PORT}`);
 });
 
+// Professional menyu buyruqlari
 await bot.api.setMyCommands([
-  { command: "start", description: "Botni ishga tushirish / Til tanlash" },
-  { command: "help", description: "Yordam va ko'rsatmalar" },
-  { command: "clean", description: "Muloqot tarixini tozalash" },
-  { command: "history", description: "Mijozlar tarixi" },
+  { command: "start", description: "🔄 Botni qayta ishga tushirish va tilni tanlash" },
+  { command: "settings", description: "⚙️ Bot sozlamalari va avto-javob" },
+  { command: "history", description: "📋 Mijozlar va muloqot tarixi" },
+  { command: "clean", description: "🧹 Muloqot tarixini tozalash" },
+  { command: "help", description: "💡 Yordam va ko'rsatmalar" },
+  { command: "support", description: "🛠 Admin bilan bog'lanish" }
 ]);
+
+bot.command("start", startCommand);
+bot.command("help", helpCommand);
+bot.command("language", languageCommand);
+bot.command("clean", cleanCommand);
+bot.command("muammo", muammoCommand);
+bot.command("grant", grantCommand);
+
+bot.command("settings", async (ctx) => {
+  await ctx.reply("⚙️ Sozlamalar bo'limiga xush kelibsiz. Quyidagi tugmalar orqali boshqaring:", { reply_markup: mainMenuKeyboard });
+});
+
+bot.command("support", async (ctx) => {
+  await ctx.reply("🛠 Admin bilan bog'lanish uchun murojaatingizni yuboring:", { reply_markup: mainMenuKeyboard });
+});
 
 // ================= KLAVIATURALAR VA MENYULAR =================
 
-// Til tanlash tugmalari
 const languageKeyboard = {
   inline_keyboard: [
     [
@@ -52,7 +69,7 @@ const languageKeyboard = {
   ]
 };
 
-// Asosiy Menyu (5 ta Bo'lim)
+// Asosiy Menyu (5 ta asosiy bo'lim + tez kunda)
 const mainMenuKeyboard = {
   keyboard: [
     [{ text: "🌐 AI va Qidiruv" }, { text: "🎥 Media va Yaratish" }],
@@ -62,7 +79,7 @@ const mainMenuKeyboard = {
   resize_keyboard: true
 };
 
-// 1-Bo'lim Sub-menyusi
+// 1-Bo'lim: AI va Qidiruv (Ortga tugmasi bilan)
 const submenu1Keyboard = {
   keyboard: [
     [{ text: "🤖 AI Chat" }, { text: "🔍 Internet Qidiruv" }],
@@ -72,7 +89,7 @@ const submenu1Keyboard = {
   resize_keyboard: true
 };
 
-// 2-Bo'lim Sub-menyusi
+// 2-Bo'lim: Media va Yaratish (Ortga tugmasi bilan)
 const submenu2Keyboard = {
   keyboard: [
     [{ text: "🎨 Rasm Yaratish" }, { text: "🖼 Rasm va Video O'qish" }],
@@ -82,7 +99,7 @@ const submenu2Keyboard = {
   resize_keyboard: true
 };
 
-// 3-Bo'lim Sub-menyusi
+// 3-Bo'lim: Kod va Instrumentlar (Ortga tugmasi bilan)
 const submenu3Keyboard = {
   keyboard: [
     [{ text: "💻 Kod Yozish" }, { text: "🧠 Claude AI" }],
@@ -93,7 +110,7 @@ const submenu3Keyboard = {
   resize_keyboard: true
 };
 
-// 4-Bo'lim Sub-menyusi (Biznes & Mijozlar)
+// 4-Bo'lim: Biznes Avto-javob va Mijozlar tarixi (Ortga tugmasi bilan)
 const submenu4Keyboard = {
   keyboard: [
     [{ text: "📞 Kontakt ulashish", request_contact: true }],
@@ -140,13 +157,11 @@ bot.callbackQuery(/^set_lang_/, async (ctx) => {
   await ctx.reply(text, { parse_mode: "Markdown", reply_markup: mainMenuKeyboard });
 });
 
-// ================= ORTGA TUGMASI LOGIKASI =================
-
 bot.hears("🔙 Ortga", async (ctx) => {
   await ctx.reply("🏠 **Asosiy menyuga qaytdingiz:**", { reply_markup: mainMenuKeyboard });
 });
 
-// ================= BO'LIM 1: AI VA QIDIRUV =================
+// ================= 1-BO'LIM: AI VA QIDIRUV =================
 
 bot.hears("🌐 AI va Qidiruv", async (ctx) => {
   await ctx.reply("🌐 **AI va Qidiruv bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu1Keyboard });
@@ -164,7 +179,7 @@ bot.hears("🎬 Kino Topish", async (ctx) => {
   await ctx.reply("🎬 **Kino Topish:**\nQaysi kino yoki serialni qidiryapsiz? Nomini yozing:", { reply_markup: submenu1Keyboard });
 });
 
-// ================= BO'LIM 2: MEDIA VA YARATISH =================
+// ================= 2-BO'LIM: MEDIA VA YARATISH =================
 
 bot.hears("🎥 Media va Yaratish", async (ctx) => {
   await ctx.reply("🎥 **Media va Yaratish bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu2Keyboard });
@@ -186,7 +201,7 @@ bot.hears("🔗 Link orqali Yuklash", async (ctx) => {
   await ctx.reply("🔗 **Media Yuklovchi:**\nRasm yoki video havolasini (linkini) yuboring, uni yuklab beraman.", { reply_markup: submenu2Keyboard });
 });
 
-// ================= BO'LIM 3: KOD VA INSTRUMENTLAR =================
+// ================= 3-BO'LIM: KOD VA INSTRUMENTLAR =================
 
 bot.hears("💻 Kod va Instrumentlar", async (ctx) => {
   await ctx.reply("💻 **Kod va Instrumentlar bo'limi:**\nKerakli vositani tanlang:", { reply_markup: submenu3Keyboard });
@@ -208,12 +223,11 @@ bot.hears("🌐 Tarjima", async (ctx) => {
   await ctx.reply("🌐 **Tarjimon:**\nTarjima qilinishi kerak bo'lgan matnni va qaysi tilga o'girish kerakligini yuboring:", { reply_markup: submenu3Keyboard });
 });
 
-// 🎮 MOD OYUNLAR LOGIKASI
 bot.hears("🎮 Mod Oyunlar", async (ctx) => {
   await ctx.reply("🎮 **Modli O'yinlar Qidiruvi:**\nO'zingizga kerakli o'yin nomini yozing. Men uning mod/apk faylini yoki yuklash linkini topib beraman:", { reply_markup: submenu3Keyboard });
 });
 
-// ================= BO'LIM 4: BIZNES AVTO-JAVOB & MIJOZLAR =================
+// ================= 4-BO'LIM: BIZNES AVTO-JAVOB & MIJOZLAR =================
 
 bot.hears("🤖 Biznes Avto-javob", async (ctx) => {
   await ctx.reply("🤖 **Telegram Business Avto-javob Sozlamalari:**", { reply_markup: submenu4Keyboard });
@@ -249,8 +263,6 @@ bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
   try {
     const userId = ctx.from.id;
     const user = await User.findOne({ telegramId: userId });
-
-    // Tekshiramiz: Bu foydalanuvchi biznes akkaunt egasimi?
     const isOwner = user && (user.businessConnectionId || user.telegramId === userId);
 
     if (!isOwner) {
@@ -300,7 +312,7 @@ bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
   }
 });
 
-// ================= BO'LIM 5: MULOQOT TARIXI (UMUMIY FOYDALANUVCHILAR) =================
+// ================= 5-BO'LIM: MULOQOT TARIXI (UMUMIY) =================
 
 bot.hears("📜 Muloqot Tarixi", async (ctx) => {
   try {
@@ -327,7 +339,7 @@ bot.hears("📜 Muloqot Tarixi", async (ctx) => {
   }
 });
 
-// ================= BO'LIM 6: TEZ KUNDA =================
+// ================= 6-BO'LIM: TEZ KUNDA =================
 
 bot.hears("✨ Tez kunda (Bo'sh)", async (ctx) => {
   await ctx.reply("✨ Hali bo'sh", { reply_markup: mainMenuKeyboard });
@@ -360,7 +372,7 @@ bot.on("message:contact", async (ctx) => {
   }
 });
 
-// ================= BIZNES XABARLAR VA MUKAMMAL AI LIMIT LOGIKASI =================
+// ================= BIZNES XABARLAR VA AI 3-MARTALIK QO'RIQLASH LOGIKASI =================
 
 bot.on("business_connection", async (ctx) => {
   try {
@@ -397,25 +409,23 @@ bot.on("business_message", async (ctx) => {
 
     if (!owner || owner.autoReplyActive === false) return;
 
-    // 1. SHART: Agar xabar AKKAUNT EGASI tomonidan yozilgan bo'lsa (Outgoing)
+    // 1. Agar egasi javob yozsa (Outgoing), hisoblagich noldan boshlanishi uchun 'owner_reply' yozamiz
     if (message.is_outgoing || (message.from && message.from.id === owner.telegramId)) {
-      // Egasi mijozga javob berganini bazada belgilaymiz (AI HISOBINI RESET QILADI)
       await Memory.create({
         telegramId: owner.telegramId,
         role: "owner_reply",
         content: `[Mijoz ID: ${senderId}] Akkaunt egasi javob yozdi: ${text}`
       });
-      return; // AI o'zi yozgan xabarga qayta javob bermaydi
+      return;
     }
 
-    // 2. SHART: Egasining eng oxirgi javob xabarini izlaymiz
+    // 2. Egasining oxirgi javobini topamiz
     const lastOwnerReply = await Memory.findOne({
       telegramId: owner.telegramId,
       role: "owner_reply",
       content: { $regex: `\\[Mijoz ID: ${senderId}\\]` }
     }).sort({ createdAt: -1 });
 
-    // Egasi oxirgi marta yozganidan beri AI nechta javob berganini hisoblaymiz
     const filter = {
       telegramId: owner.telegramId,
       role: "assistant",
@@ -428,18 +438,16 @@ bot.on("business_message", async (ctx) => {
 
     const aiRepliesCount = await Memory.countDocuments(filter);
 
-    // 3. SHART: AI hisoblagichi 3 ga yetgan bo'lsa, AI BOSHQA YOZMAYDI! (Egasi yozguncha to'xtaydi)
+    // 3. AI 3 marta javob bergach, egasi yozguncha to'xtaydi
     if (aiRepliesCount >= 3) {
-      // Faqat egasiga mijoz yozayotgani haqida bildirishnoma boradi
       await bot.api.sendMessage(
         owner.telegramId,
-        `📩 **Mijoz yozdi (AI to'xtatilgan, 3 marta javob berib bo'lindi):**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n💬 **Xabar:** "${text}"`,
+        `📩 **Mijoz yozdi (AI to'xtatilgan, 3 ta javob tugadi):**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n💬 **Xabar:** "${text}"`,
         { parse_mode: "HTML" }
       ).catch(() => {});
       return;
     }
 
-    // AI Javobini shakllantirish
     let finalReply = "";
 
     if (aiRepliesCount === 0) {
@@ -456,7 +464,6 @@ bot.on("business_message", async (ctx) => {
       finalReply = await queryAI(promptMessages, owner.language || "uz") || "Tushunarli, tez orada bog'lanamiz.";
     }
 
-    // AI Javobini saqlaymiz va mijozga yuboramiz
     await Memory.create({
       telegramId: owner.telegramId,
       role: "assistant",
@@ -465,7 +472,6 @@ bot.on("business_message", async (ctx) => {
 
     await ctx.reply(finalReply, { business_connection_id: message.business_connection_id });
 
-    // Bot egasiga bildirishnoma
     await bot.api.sendMessage(
       owner.telegramId,
       `💬 **Biznes Yozishuv:**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n📥 **U yozdi:** "${text}"\n📤 **AI Javobi (${aiRepliesCount + 1}/3):** "${finalReply}"`,
@@ -477,9 +483,8 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
-// ================= MEDIA VA FAYLLARNI QABUL QILISH =================
+// ================= MEDIA VA FAYLLAR =================
 
-// Dumaloq Video (`video_note`)
 bot.on("message:video", async (ctx) => {
   try {
     const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...");
@@ -495,24 +500,21 @@ bot.on("message:video", async (ctx) => {
   }
 });
 
-// Rasm o'qish
 bot.on("message:photo", async (ctx) => {
-  await ctx.reply("🖼 **Rasm qabul qilindi va tahlil uchun tayyorlandi!**", { reply_markup: mainMenuKeyboard });
+  await ctx.reply("🖼 **Rasm qabul qilindi va tahlil qilinmoqda!**", { reply_markup: mainMenuKeyboard });
 });
 
-// Fayl o'qish
 bot.on("message:document", async (ctx) => {
-  await ctx.reply("📁 **Hujjat/Fayl qabul qilindi.** Tahlil qilinmoqda...", { reply_markup: mainMenuKeyboard });
+  await ctx.reply("📁 **Hujjat qabul qilindi.** O'qilib, tahlil qilinmoqda...", { reply_markup: mainMenuKeyboard });
 });
 
-// ================= MATNLI XABARLAR VA SHAXSIY AI CHAT =================
+// ================= MATNLI XABARLAR VA TAHRIRLASH =================
 
 bot.on("message:text", async (ctx, next) => {
   try {
     const userId = ctx.from.id;
     const user = await User.findOne({ telegramId: userId });
 
-    // Tahrirlash rejimi kutilayotgan bo'lsa
     if (user && user.waitingForInstruction) {
       user.businessInstruction = ctx.message.text;
       user.waitingForInstruction = false;
@@ -538,4 +540,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with advance AI logic & design");
+logger.info("Telegram Bot successfully started with all features & updated commands");
