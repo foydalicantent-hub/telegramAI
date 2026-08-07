@@ -135,6 +135,7 @@ bot.callbackQuery(/^set_lang_/, async (ctx) => {
 });
 
 bot.hears("🔙 Ortga", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "ai_chat" }, { upsert: true });
   await ctx.reply("🏠 **Asosiy menyuga qaytdingiz:**", { reply_markup: mainMenuKeyboard });
 });
 
@@ -166,18 +167,22 @@ bot.hears("🎥 Media va Yaratish", async (ctx) => {
 });
 
 bot.hears("🎨 Rasm Yaratish", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "image_gen" }, { upsert: true });
   await ctx.reply("🎨 **Rasm Yaratish:**\nYaratilishi kerak bo'lgan rasm tasvirini batafsil yozib yuboring:", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🖼 Rasm va Video O'qish", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "vision" }, { upsert: true });
   await ctx.reply("🖼 **Rasm va Video O'qish:**\nMenga rasm yoki video yuboring, uni tahlil qilib beraman.", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🔴 Dumaloq Video", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "video_note" }, { upsert: true });
   await ctx.reply("🔴 **Dumaloq Video (`video_note`):**\nMenga oddiy video yuboring, uni dumaloq shaklga o'tkazib beraman.", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🔗 Link orqali Yuklash", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "downloader" }, { upsert: true });
   await ctx.reply("🔗 **Media Yuklovchi:**\nRasm yoki video havolasini (linkini) yuboring, uni yuklab beraman.", { reply_markup: submenu2Keyboard });
 });
 
@@ -198,6 +203,7 @@ bot.hears("🧠 Claude AI", async (ctx) => {
 });
 
 bot.hears("📁 Fayl O'qish", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "file_read" }, { upsert: true });
   await ctx.reply("📁 **Fayl Tahlilchisi:**\nHujjat, kod fayli yoki matnli fayl tashlang, uni o'qib tushuntirib beraman.", { reply_markup: submenu3Keyboard });
 });
 
@@ -207,6 +213,7 @@ bot.hears("🌐 Tarjima", async (ctx) => {
 });
 
 bot.hears("🎮 Mod Oyunlar", async (ctx) => {
+  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "mod_games" }, { upsert: true });
   await ctx.reply("🎮 **Modli O'yinlar Qidiruvi:**\nO'zingizga kerakli o'yin nomini yozing. Men uning mod/apk faylini yoki yuklash linkini topib beraman:", { reply_markup: submenu3Keyboard });
 });
 
@@ -477,7 +484,7 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
-// ================= MATNLI XABARLAR VA QIDIRUV / KINO / AI CHAT =================
+// ================= MATNLI XABARLAR VA REJIMLAR BO'YICHA ISHLASH =================
 
 bot.on("message:text", async (ctx, next) => {
   try {
@@ -496,23 +503,33 @@ bot.on("message:text", async (ctx, next) => {
       return;
     }
 
-    // 2. Internet Qidiruv, Kino Qidirish yoki AI Chat rejimlari bo'yicha javob berish
     const mode = user?.currentMode || "ai_chat";
     let promptMessages = [];
 
-    if (mode === "search") {
+    // Har bir rejim uchun alohida tizim ko'rsatmasi (System Prompt)
+    if (mode === "movie") {
       promptMessages = [
-        { role: "system", content: "Sen internet qidiruv yordamchisisan. Berilgan so'rov bo'yicha internetdan olingandek eng aniq, so'nggi ma'lumotlarni topib ber." },
+        { role: "system", content: "Sen kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi so'ragan kino, serial yoki uning tarjima qilingan nomini, mazmunini va qayerdan topish mumkinligini aniq tushuntirib ber." },
         { role: "user", content: text }
       ];
-    } else if (mode === "movie") {
+    } else if (mode === "search") {
       promptMessages = [
-        { role: "system", content: "Sen kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi so'ragan kino, serial yoki uning tarjima qilingan nomini, mazmunini va qayerdan ko'rish mumkinligini topib ber." },
+        { role: "system", content: "Sen internet qidiruv yordamchisisan. Berilgan so'rov bo'yicha internetdan olingandek eng aniq, so'nggi ma'lumotlarni topib ber." },
         { role: "user", content: text }
       ];
     } else if (mode === "coding") {
       promptMessages = [
         { role: "system", content: "Sen tajribali dasturlash assistentisan. Kod yozish va xatoliklarni to'g'rilashda yordam ber." },
+        { role: "user", content: text }
+      ];
+    } else if (mode === "translate") {
+      promptMessages = [
+        { role: "system", content: "Sen professional tarjimonsan. Berilgan matnni mos tilga aniq tarjima qilib ber." },
+        { role: "user", content: text }
+      ];
+    } else if (mode === "mod_games") {
+      promptMessages = [
+        { role: "system", content: "Sen mobil o'yinlar va modlar bo'yicha yordamchisan. Foydalanuvchi so'ragan o'yin haqida ma'lumot ber." },
         { role: "user", content: text }
       ];
     } else {
@@ -550,4 +567,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with working search and movie features!");
+logger.info("Telegram Bot successfully started with fixed search and correct modes!");
