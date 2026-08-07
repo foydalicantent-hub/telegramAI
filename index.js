@@ -69,11 +69,11 @@ const languageKeyboard = {
   ]
 };
 
-// Asosiy Menyu (Rasmda ko'rsatilgan 6 ta asosiy tugma)
+// Asosiy Menyu (Robot boshi olib tashlanib, o'rniga ⚡️ qo'yildi)
 const mainMenuKeyboard = {
   keyboard: [
     [{ text: "🌐 AI va Qidiruv" }, { text: "🎥 Media va Yaratish" }],
-    [{ text: "💻 Kod va Instrumentlar" }, { text: "🤖 Biznes Avto-javob" }],
+    [{ text: "💻 Kod va Instrumentlar" }, { text: "⚡️ Biznes Avto-javob" }],
     [{ text: "📜 Muloqot Tarixi" }, { text: "✨ Tez kunda (Bo'sh)" }]
   ],
   resize_keyboard: true
@@ -229,8 +229,8 @@ bot.hears("🎮 Mod Oyunlar", async (ctx) => {
 
 // ================= 4-BO'LIM: BIZNES AVTO-JAVOB & MIJOZLAR =================
 
-bot.hears("🤖 Biznes Avto-javob", async (ctx) => {
-  await ctx.reply("🤖 **Telegram Business Avto-javob Sozlamalari:**", { reply_markup: submenu4Keyboard });
+bot.hears("⚡️ Biznes Avto-javob", async (ctx) => {
+  await ctx.reply("⚡️ **Telegram Business Avto-javob Sozlamalari:**", { reply_markup: submenu4Keyboard });
 });
 
 bot.hears("🟢 Yoqish", async (ctx) => {
@@ -312,7 +312,7 @@ bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
   }
 });
 
-// ================= 5-BO'LIM: MULOQOT TARIXI (FAQAT SHU YER BOSILGANDA CHIQADI) =================
+// ================= 5-BO'LIM: MULOQOT TARIXI =================
 
 async function showGeneralHistory(ctx) {
   try {
@@ -412,7 +412,6 @@ bot.on("business_message", async (ctx) => {
 
     if (!owner || owner.autoReplyActive === false) return;
 
-    // 1. Agar egasi javob yozsa (Outgoing), hisoblagich nolga tushadi
     if (message.is_outgoing || (message.from && message.from.id === owner.telegramId)) {
       await Memory.create({
         telegramId: owner.telegramId,
@@ -422,7 +421,6 @@ bot.on("business_message", async (ctx) => {
       return;
     }
 
-    // 2. Egasining oxirgi javobini topamiz
     const lastOwnerReply = await Memory.findOne({
       telegramId: owner.telegramId,
       role: "owner_reply",
@@ -441,7 +439,6 @@ bot.on("business_message", async (ctx) => {
 
     const aiRepliesCount = await Memory.countDocuments(filter);
 
-    // 3. AI 3 marta yozgandan keyin egasi yozguncha to'xtaydi (Chatga spam qilmaydi)
     if (aiRepliesCount >= 3) {
       return;
     }
@@ -536,4 +533,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot 500+ lines fully loaded with submenus and complete design");
+logger.info("Telegram Bot 550+ lines fully loaded with submenus and updated design");
