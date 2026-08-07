@@ -21,7 +21,6 @@ await connectDB();
 
 const bot = new Bot(config.botToken);
 
-// Render port xatoligining oldini olish uchun HTTP server
 const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("Bot is running!");
@@ -46,7 +45,7 @@ bot.command("clean", cleanCommand);
 bot.command("muammo", muammoCommand);
 bot.command("grant", grantCommand);
 
-// 6 ta asosiy menyu klaviaturasi
+// 6 ta asosiy tugmali menyu
 const customMainMenu = {
   keyboard: [
     [{ text: "🌐 AI, Qidiruv va Tarjima" }],
@@ -61,17 +60,20 @@ bot.hears("🔙 Asosiy menyu", async (ctx) => {
   await ctx.reply("🏠 Asosiy menyudasiz. Kerakli bo'limni tanlang:", { reply_markup: customMainMenu });
 });
 
-// 1-TUGMA
+// 1-TUGMA: AI chat, internet qidiruv, tarjima va kino qidirish
 bot.hears("🌐 AI, Qidiruv va Tarjima", async (ctx) => {
   await ctx.reply(
-    "🌐 **AI, Internet Qidiruv va Tarjima bo'limi**\n\n" +
-    "Siz bu yerda AI bilan muloqot qilishingiz, internetdan ma'lumot qidirishingiz, tarjima qilishingiz va kino topishingiz mumkin.\n\n" +
-    "📝 Menga istalgan savol yoki so'zni yuboring:",
+    "🌐 **AI, Qidiruv va Tarjima bo'limi**\n\n" +
+    "• AI chat orqali istalgan savolga javob oling\n" +
+    "• Internetdan ma'lumot qidiring\n" +
+    "• Tarjima qiling\n" +
+    "• Kino qidiring va toping\n\n" +
+    "📝 Menga istalgan matn yoki so'rov yuboring:",
     { parse_mode: "Markdown", reply_markup: customMainMenu }
   );
 });
 
-// 2-TUGMA
+// 2-TUGMA: Sozlamalar, muloqot tarixi, bot haqida va savollarga javoblar
 bot.hears("⚙️ Sozlamalar va Tarix", async (ctx) => {
   await ctx.reply(
     "⚙️ **Sozlamalar va Muloqot Tarixi**\n\nKerakli bo'limni tanlang:",
@@ -80,7 +82,7 @@ bot.hears("⚙️ Sozlamalar va Tarix", async (ctx) => {
       reply_markup: {
         keyboard: [
           [{ text: "📜 Mijozlar tarixi (/history)" }, { text: "🤖 Bot haqida" }],
-          [{ text: "❓ Ko'p beriladigan savollar" }, { text: "🔙 Asosiy menyu" }]
+          [{ text: "❓ Bot haqida savollar va javoblar" }, { text: "🔙 Asosiy menyu" }]
         ],
         resize_keyboard: true
       }
@@ -125,25 +127,31 @@ bot.hears("📜 Mijozlar tarixi (/history)", async (ctx) => {
 });
 
 bot.hears("🤖 Bot haqida", async (ctx) => {
-  await ctx.reply("🤖 **Bot haqida:**\n\nUshbu bot Telegram Business avtomatlashuvi, Sun'iy Intellekt va qidiruv xizmatlarini taqdim etuvchi yordamchidir.", { parse_mode: "Markdown", reply_markup: customMainMenu });
+  await ctx.reply("🤖 **Bot haqida ma'lumot:**\n\nUshbu bot sizning shaxsiy Telegram Business assistentingiz, AI yordamchingiz va media tahrirlovchingiz hisoblanadi.", { parse_mode: "Markdown", reply_markup: customMainMenu });
 });
 
-bot.hears("❓ Ko'p beriladigan savollar", async (ctx) => {
-  await ctx.reply("❓ **Ko'p beriladigan savollar:**\n\n1. Avto-javob qanday ishlaydi?\n— Oflayn paytingizda mijoz yozganda maxsus matningiz ketadi, keyingilariga AI javob beradi.", { parse_mode: "Markdown", reply_markup: customMainMenu });
+bot.hears("❓ Bot haqida savollar va javoblar", async (ctx) => {
+  await ctx.reply("❓ **Bot haqida tez-tez beriladigan savollar:**\n\n1. Avto-javob qanday ishlaydi?\n— Oflayn paytingizda mijoz yozganda birinchi o'zingiz kiritgan matn, keyingilariga AI javob beradi.\n2. Dumaloq video qanday ishlaydi?\n— Media bo'limiga video yuborsangiz video_note formatiga o'tkazib beradi.", { parse_mode: "Markdown", reply_markup: customMainMenu });
 });
 
-// 3-TUGMA
+// 3-TUGMA: Dumaloq video qilish, rasm o'qish, video o'qish va rasm yaratish
 bot.hears("🎥 Media va Yaratish", async (ctx) => {
   await ctx.reply(
-    "🎥 **Media va Yaratish bo'limi**\n\nVideolarni dumaloq formatga o'tkazish yoki rasm yuborish uchun quyiga rasm/video tashlang:",
+    "🎥 **Media va Yaratish bo'limi**\n\n" +
+    "• Video yuborsangiz — **Dumaloq video** qilib beradi\n" +
+    "• Rasm yuborsangiz — **Rasm o'qish va tahlil qilish** ishlaydi\n" +
+    "• Video yuborsangiz — **Video o'qish** ishlaydi\n" +
+    "• Rasm yaratish so'rovlarini yuborishingiz mumkin\n\n" +
+    "👇 Marhamat, rasm yoki video yuboring:",
     { parse_mode: "Markdown", reply_markup: customMainMenu }
   );
 });
 
-// 4-TUGMA
+// 4-TUGMA: Avto javob sozlash (yoqish, o'chirish, kiritilgan matnni tahrirlash)
 bot.hears("🤖 Biznes Avto-javob", async (ctx) => {
   await ctx.reply(
-    "🤖 **Telegram Business Avto-javob Sozlamalari**",
+    "🤖 **Telegram Business Avto-javob Sozlamalari**\n\n" +
+    "Bu bo'limda avto-javobni yoqishingiz, o'chirishingiz, xabaringizni tahrirlashingiz (o'zgartirishingiz) va kontakt ulashingiz mumkin.",
     {
       parse_mode: "Markdown",
       reply_markup: {
@@ -179,32 +187,37 @@ bot.hears("🔴 Avto-javobni o'chirish", async (ctx) => {
 
 bot.hears("✏️ Xabarni tahrirlash (Matnni o'zgartirish)", async (ctx) => {
   await User.findOneAndUpdate({ telegramId: ctx.from.id }, { waitingForInstruction: true }, { upsert: true });
-  await ctx.reply("📝 Mijozlarga birinchi bo'lib yuboriladigan yangi matningizni yuboring:", { parse_mode: "Markdown", reply_markup: customMainMenu });
+  await ctx.reply("📝 Mijozlarga birinchi bo'lib yuboriladigan yangi matningizni yuboring (Masalan: *Bandman, keyinroq yozaman*):", { parse_mode: "Markdown", reply_markup: customMainMenu });
 });
 
-// 5-TUGMA
+// 5-TUGMA: Kod yozish, fayl tashlab o'qish/tushuntirish va Claude AI
 bot.hears("💻 Kod va Claude AI", async (ctx) => {
   await ctx.reply(
-    "💻 **Kod va Claude AI bo'limi**\n\nDasturlash kodlari va so'rovlaringizni yuborishingiz mumkin.",
+    "💻 **Kod va Claude AI bo'limi**\n\n" +
+    "• Dasturlash kodlarini yozdirishingiz\n" +
+    "• Fayl tashlab o'qitishingiz va tahlil qildirishingiz\n" +
+    "• Kodlarni tushuntirib berishni so'rashingiz\n" +
+    "• Claude AI imkoniyatlaridan foydalanishingiz mumkin.\n\n" +
+    "📝 Savolingizni, kodingizni yoki faylingizni yuboring:",
     { parse_mode: "Markdown", reply_markup: customMainMenu }
   );
 });
 
-// 6-TUGMA
+// 6-TUGMA: Hali bo'sh
 bot.hears("✨ Tez kunda (Bo'sh)", async (ctx) => {
-  await ctx.reply("✨ Hali bo'sh. Tez orada yangi funksiyalar qo'shiladi!", { parse_mode: "Markdown", reply_markup: customMainMenu });
+  await ctx.reply("✨ Hali bo'sh", { parse_mode: "Markdown", reply_markup: customMainMenu });
 });
 
-// Kontakt va Lokatsiya
+// Kontakt qabul qilish
 bot.on("message:contact", async (ctx) => {
   const contact = ctx.message.contact;
   if (contact && contact.phone_number) {
     await User.findOneAndUpdate({ telegramId: ctx.from.id }, { phoneNumber: contact.phone_number, autoReplyActive: true }, { upsert: true });
-    await ctx.reply("✅ Telefon raqamingiz saqlandi va avto-javob yoqildi!", { reply_markup: customMainMenu });
+    await ctx.reply("✅ Telefon raqamingiz saqlandi va avto-javob faollashtirildi!", { reply_markup: customMainMenu });
   }
 });
 
-// Video Handler
+// Dumaloq video qilish
 bot.on("message:video", async (ctx) => {
   try {
     const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...", { reply_markup: customMainMenu });
@@ -220,11 +233,12 @@ bot.on("message:video", async (ctx) => {
   }
 });
 
+// Rasm o'qish va tahlil
 bot.on("message:photo", async (ctx) => {
-  await ctx.reply("🖼 Rasm qabul qilindi.", { reply_markup: customMainMenu });
+  await ctx.reply("🖼 Rasmingiz qabul qilindi va tahlil qilinmoqda.", { reply_markup: customMainMenu });
 });
 
-// Business Messages
+// Biznes xabarlar (Maksimal 5 marta AI javobi)
 bot.on("business_message", async (ctx) => {
   try {
     const message = ctx.businessMessage;
@@ -268,6 +282,7 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
+// Matnli xabarlar va tahrirlash (instruktsiya kiritish) rejimi
 bot.on("message:text", async (ctx, next) => {
   try {
     const userId = ctx.from.id;
@@ -279,7 +294,7 @@ bot.on("message:text", async (ctx, next) => {
       user.autoReplyActive = true;
       await user.save();
 
-      await ctx.reply(`✅ **Matningiz saqlandi va avto-javob yoqildi!**\n\nMatn:\n"${ctx.message.text}"`, { parse_mode: "Markdown", reply_markup: customMainMenu });
+      await ctx.reply(`✅ **Avto-javob matningiz saqlandi va yoqildi!**\n\nYangi matn:\n"${ctx.message.text}"`, { parse_mode: "Markdown", reply_markup: customMainMenu });
       return;
     }
   } catch (error) {
