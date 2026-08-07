@@ -552,34 +552,40 @@ bot.on("message:text", async (ctx, next) => {
 
     let promptMessages = [];
 
-    // 4. Qolgan rejimlarni qat'iy va aniq taqsimlash
+    // 4. Rejimlarga qat'iy va mukammal ko'rsatmalar berish
     if (mode === "movie") {
       promptMessages = [
-        { role: "system", content: "Sen professional kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi so'ragan kino yoki serial haqida to'liq ma'lumot, chiqarilgan yili, mazmuni va ko'rish havolasini ber." },
+        { 
+          role: "system", 
+          content: "Siz professional kino va seriallar bo'yicha ekspertsiz. Foydalanuvchi kino nomini yozsa, unga quyidagi shaklda to'liq va batafsil ma'lumot bering: \n1. Kino nomi va chiqqan yili\n2. Janri va rejissyori\n3. Qisqacha mazmuni (syujeti)\n4. Bosh rollar\n5. Tomosha qilish uchun tavsiyalar." 
+        },
         { role: "user", content: text }
       ];
     } else if (mode === "search") {
       promptMessages = [
-        { role: "system", content: "Sen professional internet qidiruv assistentisan. Foydalanuvchi so'ragan har qanday savol (ob-havo, yangiliklar, faktlar va hokazo) bo'yicha eng aniq, batafsil va so'nggi ma'lumotlarni taqdim et." },
+        { 
+          role: "system", 
+          content: "Sen professional internet qidiruv assistentisan. Foydalanuvchi so'ragan har qanday savol (ob-havo, yangiliklar, faktlar va hokazo) bo'yicha eng aniq, faktlarga boy va batafsil javob ber." 
+        },
         { role: "user", content: text }
       ];
     } else if (mode === "coding") {
       promptMessages = [
-        { role: "system", content: "Sen tajribali dasturlash assistentisan. Kod yozish va xatoliklarni to'g'rilashda yordam ber." },
+        { role: "system", content: "Sen tajribali dasturlash assistentisan. Kodni mukammal yozib, tushuntirib ber." },
         { role: "user", content: text }
       ];
     } else if (mode === "translate") {
       promptMessages = [
-        { role: "system", content: "Sen professional tarjimonsan. Berilgan matnni mos tilga aniq tarjima qilib ber." },
+        { role: "system", content: "Sen professional tarjimonsan. Berilgan matnni boshqa tilga xatosiz va chiroyli tarjima qil." },
         { role: "user", content: text }
       ];
     } else if (mode === "mod_games") {
       promptMessages = [
-        { role: "system", content: "Sen mobil o'yinlar va modlar bo'yicha yordamchisan. Foydalanuvchi so'ragan o'yin haqida ma'lumot ber." },
+        { role: "system", content: "Sen o'yinlar bo'yicha mutaxassissansan. So'ralgan o'yin haqida ma'lumot va uning xususiyatlarini yozib ber." },
         { role: "user", content: text }
       ];
     } else {
-      // Standart AI Chat (Faqat oddiy chat)
+      // Standart AI Chat
       const history = await Memory.find({ telegramId: userId }).sort({ createdAt: -1 }).limit(6);
       promptMessages = history.reverse().map(m => ({
         role: m.role === "user" ? "user" : "assistant",
