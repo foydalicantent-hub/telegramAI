@@ -145,7 +145,7 @@ bot.hears("🔙 Ortga", async (ctx) => {
   await ctx.reply("🏠 **Asosiy menyuga qaytdingiz:**", { reply_markup: mainMenuKeyboard });
 });
 
-// ================= BO'LIMLAR REJIMINI YOQISH =================
+// ================= REJIMLARNI YOQISH (CURRENT MODE) =================
 
 bot.hears("🌐 AI va Qidiruv", async (ctx) => {
   await ctx.reply("🌐 **AI va Qidiruv bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu1Keyboard });
@@ -521,7 +521,7 @@ bot.on("message:text", async (ctx) => {
       return;
     }
 
-    // 3. Claude AI Rejimi (To'g'ridan-to'g'ri Claude modeli)
+    // 3. Claude AI Rejimi
     if (mode === "claude") {
       const waitMsg = await ctx.reply("🧠 Claude AI tahlil qilmoqda, biroz kuting...");
       
@@ -537,11 +537,11 @@ bot.on("message:text", async (ctx) => {
 
     let systemInstruction = "";
 
-    // 4. Boshqa barcha rejimlarni qat'iy taqsimlash
+    // 4. Boshqa rejimlarni qat'iy boshqarish
     if (mode === "movie") {
-      systemInstruction = `Sen professional kino qidiruv assistentisan. Foydalanuvchi qaysi kino yoki serial nomini yozsa, o'sha kino haqida batafsil ma'lumot va uni onlayn tomosha qilish / yuklab olish uchun ishlaydigan havolalarni (masalan, YouTube treyleri yoki Google qidiruv havolalarini [Kino nomi - Ko'rish](link) formatida) taqdim et.`;
+      systemInstruction = `Sen professional kino qidiruv assistentisan. Foydalanuvchi qaysi kino yoki serial nomini yozsa, o'sha kino haqida batafsil ma'lumot, chiqarilgan yili, rejissyori, mazmuni hamda onlayn ko'rish va yuklab olish uchun aniq havolalarni (masalan, Uzmovi yoki YouTube treyleri havolalarini) taqdim et.`;
     } else if (mode === "search") {
-      systemInstruction = "Sen internet qidiruv assistentisan. Foydalanuvchi so'ragan mavzu yoki so'rov bo'yicha internetdagi eng aniq va batafsil ma'lumotlarni havolalar bilan birga taqdim et.";
+      systemInstruction = "Sen internet qidiruv assistentisan. Foydalanuvchi so'ragan mavzu yoki savol bo'yicha internetdagi eng aniq va so'nggi faktlarni, ma'lumotlarni batafsil yoritib ber.";
     } else if (mode === "coding") {
       systemInstruction = "Sen tajribali dasturlash assistentisan. Kod yozish, tahlil qilish va xatolarni to'g'rilashda yordam ber.";
     } else if (mode === "translate") {
@@ -582,4 +582,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with all features fully working!");
+logger.info("Telegram Bot successfully started with movie and search modes fixed!");
