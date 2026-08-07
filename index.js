@@ -85,7 +85,7 @@ bot.hears("🟢 Avto-javobni yoqish", async (ctx) => {
     await user.save();
 
     await ctx.reply(
-      "✅ **Avto-javob yoqildi!**\n\nEndi oflayn paytingizda mijozlarga avval sizning xabaringiz, keyingi xabarlarga esa AI javob beradi.",
+      "✅ **Avto-javob yoqildi!**\n\nOflayn paytingizda mijozlarga avval sizning xabaringiz, keyingilariga esa AI javob beradi.",
       { 
         parse_mode: "Markdown",
         reply_markup: {
@@ -153,7 +153,7 @@ bot.hears("📞 Avto-javob sozlash (Kontakt yuborish)", async (ctx) => {
   );
 });
 
-// 📞 KONTAKTni QABUL QILIB OLISH VA XABARni SO'RASH
+// 📞 KONTAKTNI QABUL QILIB OLISH VA XABARNI SO'RASH
 bot.on("message:contact", async (ctx) => {
   try {
     const contact = ctx.message.contact;
@@ -171,7 +171,7 @@ bot.on("message:contact", async (ctx) => {
       );
 
       await ctx.reply(
-        "✅ **Raqamingiz qabul qilindi!**\n\n📝 Endi menga boshqalarga yuborishim kerak bo'lgan **o'zingizning xabaringizni (masalan: Men bandman tel qiling)** yuboring:",
+        "✅ **Raqamingiz qabul qilindi!**\n\n📝 Endi menga boshqalarga yuborishim kerak bo'lgan **o'zingizning xabaringizni (masalan: Bandman tel qiling)** yuboring:",
         { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
       );
     }
@@ -231,7 +231,7 @@ bot.on("business_connection", async (ctx) => {
   }
 });
 
-// Biznes xabarlarga javob berish (1-marta sizning matn, keyin AI)
+// Biznes xabarlarga javob berish (Agar o'zingiz yozgan bo'lsangiz yoki o'sha chatda bo'lsangiz - aralashmaydi)
 bot.on("business_message", async (ctx) => {
   try {
     const message = ctx.businessMessage;
@@ -249,7 +249,13 @@ bot.on("business_message", async (ctx) => {
       return;
     }
 
+    // Agar xabarni o'zingiz yozgan bo'lsangiz yoki chat egasi o'zi yuborgan bo'lsa - javob qaytarmaydi
     if (message.from && message.from.id === owner.telegramId) {
+      return;
+    }
+
+    // Agar xabar chiqqan paytda outgoing (ya'ni siz o'sha chatda turib o'zingiz javob yozgan bo'lsangiz) - jim turadi
+    if (message.is_outgoing) {
       return;
     }
 
@@ -264,9 +270,8 @@ bot.on("business_message", async (ctx) => {
 
     if (!existingMemory) {
       // 1-MARTASI: Faqat sizning matningiz boradi
-      finalReply = owner.businessInstruction || "Men bandman tel qiling";
+      finalReply = owner.businessInstruction || "Bandman tel qiling";
       
-      // Xotiraga yozib qo'yamizki, bu mijozga birinchi matn ketdi
       await Memory.create({ 
         telegramId: owner.telegramId, 
         role: "assistant", 
@@ -320,13 +325,14 @@ bot.on("message:photo", async (ctx) => {
   }
 });
 
+// VIDEO HANDLER (Dumaloq video qilish uchun to'g'irlandi)
 bot.on("message:video", async (ctx) => {
   try {
     const user = await getOrCreateUser(ctx);
     if (user.mode === "circle") {
       const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...", { reply_markup: mainMenuKeyboard });
       try {
-        await ctx.replyWithVideoNote(ctx.message.video.file_id, { reply_markup: mainMenuKeyboard });
+        await ctx.replyWithVideoNote(ctx.message.video.file_id);
         await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
       } catch (err) {
         await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
