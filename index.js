@@ -13,8 +13,6 @@ import { historyCommand } from "./history.js";
 import { muammoCommand } from "./feedback.js";
 import { grantCommand } from "./adminGrant.js";
 import { chatHandler } from "./chat.js";
-import { mainMenuKeyboard } from "./mainMenu.js";
-import { getOrCreateUser } from "./userService.js";
 import { ensureLanguage, User } from "./models/User.js";
 import { Memory } from "./models/Memory.js";
 import { queryAI } from "./aiService.js";
@@ -44,7 +42,6 @@ await bot.api.setMyCommands([
 
 // ================= KLAVIATURALAR VA MENYULAR (7 TA OYNA) =================
 
-// Asosiy Menyu (5 ta Bo'lim)
 const mainMenuKeyboard = {
   keyboard: [
     [{ text: "🌐 AI va Qidiruv" }, { text: "🎥 Media va Yaratish" }],
@@ -54,7 +51,6 @@ const mainMenuKeyboard = {
   resize_keyboard: true
 };
 
-// 1-Bo'lim Sub-menyusi
 const submenu1Keyboard = {
   keyboard: [
     [{ text: "🤖 AI Chat" }, { text: "🔍 Internet Qidiruv" }],
@@ -64,7 +60,6 @@ const submenu1Keyboard = {
   resize_keyboard: true
 };
 
-// 2-Bo'lim Sub-menyusi
 const submenu2Keyboard = {
   keyboard: [
     [{ text: "🎨 Rasm Yaratish" }, { text: "🖼 Rasm va Video O'qish" }],
@@ -74,7 +69,6 @@ const submenu2Keyboard = {
   resize_keyboard: true
 };
 
-// 3-Bo'lim Sub-menyusi
 const submenu3Keyboard = {
   keyboard: [
     [{ text: "💻 Kod Yozish" }, { text: "🧠 Claude AI" }],
@@ -85,7 +79,6 @@ const submenu3Keyboard = {
   resize_keyboard: true
 };
 
-// 4-Bo'lim Sub-menyusi (Biznes & Mijozlar)
 const submenu4Keyboard = {
   keyboard: [
     [{ text: "📞 Kontakt ulashish", request_contact: true }],
