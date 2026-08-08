@@ -1,6 +1,6 @@
 import { Bot } from "grammy";
 
-import { config, assertRequiredConfig } from "./config/env.js";
+import { config, assertRequiredConfig } from "./env.js";
 import { connectDB } from "./database/connect.js";
 import { logger } from "./utils/logger.js";
 
