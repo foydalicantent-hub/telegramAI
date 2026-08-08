@@ -11,9 +11,10 @@ import { languageCommand, languageCallback } from "./language.js";
 import { cleanCommand } from "./clean.js";
 import { muammoCommand } from "./feedback.js";
 import { grantCommand } from "./adminGrant.js";
+import { chatHandler } from "./chat.js";
 import { User } from "./User.js";
 import { Memory } from "./Memory.js";
-import { queryAI, generateImage, queryClaude } from "./aiService.js";
+import { queryAI } from "./aiService.js";
 
 assertRequiredConfig();
 await connectDB();
@@ -36,12 +37,11 @@ await bot.api.setMyCommands([
   { command: "help", description: "Yordam va ko'rsatmalar" },
   { command: "clean", description: "Muloqot tarixini tozalash" },
   { command: "history", description: "Mijozlar tarixi" },
-  { command: "about", description: "Bot haqida ma'lumot" },
-  { command: "muammo", description: "Nosozlik haqida xabar berish" },
 ]);
 
 // ================= KLAVIATURALAR VA MENYULAR =================
 
+// Til tanlash tugmalari
 const languageKeyboard = {
   inline_keyboard: [
     [
@@ -52,6 +52,7 @@ const languageKeyboard = {
   ]
 };
 
+// Asosiy Menyu (5 ta Bo'lim)
 const mainMenuKeyboard = {
   keyboard: [
     [{ text: "🌐 AI va Qidiruv" }, { text: "🎥 Media va Yaratish" }],
@@ -61,6 +62,7 @@ const mainMenuKeyboard = {
   resize_keyboard: true
 };
 
+// 1-Bo'lim Sub-menyusi
 const submenu1Keyboard = {
   keyboard: [
     [{ text: "🤖 AI Chat" }, { text: "🔍 Internet Qidiruv" }],
@@ -70,6 +72,7 @@ const submenu1Keyboard = {
   resize_keyboard: true
 };
 
+// 2-Bo'lim Sub-menyusi
 const submenu2Keyboard = {
   keyboard: [
     [{ text: "🎨 Rasm Yaratish" }, { text: "🖼 Rasm va Video O'qish" }],
@@ -79,6 +82,7 @@ const submenu2Keyboard = {
   resize_keyboard: true
 };
 
+// 3-Bo'lim Sub-menyusi
 const submenu3Keyboard = {
   keyboard: [
     [{ text: "💻 Kod Yozish" }, { text: "🧠 Claude AI" }],
@@ -89,6 +93,7 @@ const submenu3Keyboard = {
   resize_keyboard: true
 };
 
+// 4-Bo'lim Sub-menyusi (Biznes & Mijozlar)
 const submenu4Keyboard = {
   keyboard: [
     [{ text: "📞 Kontakt ulashish", request_contact: true }],
@@ -99,26 +104,17 @@ const submenu4Keyboard = {
   resize_keyboard: true
 };
 
-// ================= BUYRUQLAR VA TIL TANLASH =================
+// ================= START VA TIL TANLASH =================
 
 bot.command("start", async (ctx) => {
   await ctx.reply(
     "🌐 **Xush kelibsiz! Iltimos, muloqot tilini tanlang:**\n" +
     "🌐 **Добро пожаловать! Выберите язык:**\n" +
     "🌐 **Welcome! Please choose a language:**",
-    { parse_mode: "Markdown", reply_markup: languageKeyboard }
-  );
-});
-
-bot.command("help", helpCommand);
-bot.command("clean", cleanCommand);
-bot.command("muammo", muammoCommand);
-bot.command("grant", grantCommand);
-
-bot.command("about", async (ctx) => {
-  await ctx.reply(
-    "🤖 **Bot Haqida Ma'lumot**\n\nUshbu bot sizga AI muloqot, kino va internet qidiruv hamda Telegram Biznes assistent xizmatlarini taqdim etadi.",
-    { parse_mode: "Markdown", reply_markup: mainMenuKeyboard }
+    {
+      parse_mode: "Markdown",
+      reply_markup: languageKeyboard
+    }
   );
 });
 
@@ -128,7 +124,7 @@ bot.callbackQuery(/^set_lang_/, async (ctx) => {
 
   let user = await User.findOne({ telegramId: userId });
   if (!user) {
-    user = await User.create({ telegramId: userId, language: lang, currentMode: "ai_chat" });
+    user = await User.create({ telegramId: userId, language: lang });
   } else {
     user.language = lang;
     await user.save();
@@ -144,84 +140,80 @@ bot.callbackQuery(/^set_lang_/, async (ctx) => {
   await ctx.reply(text, { parse_mode: "Markdown", reply_markup: mainMenuKeyboard });
 });
 
+// ================= ORTGA TUGMASI LOGIKASI =================
+
 bot.hears("🔙 Ortga", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "ai_chat" }, { upsert: true });
   await ctx.reply("🏠 **Asosiy menyuga qaytdingiz:**", { reply_markup: mainMenuKeyboard });
 });
 
-// ================= BO'LIMLAR VA REJIMLARNI O'RNATISH (HEARS) =================
+// ================= BO'LIM 1: AI VA QIDIRUV =================
 
 bot.hears("🌐 AI va Qidiruv", async (ctx) => {
   await ctx.reply("🌐 **AI va Qidiruv bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu1Keyboard });
 });
 
 bot.hears("🤖 AI Chat", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "ai_chat" }, { upsert: true });
   await ctx.reply("🤖 **AI Chat rejimi faol!**\nSizni qiziqtirgan har qanday savolni yozib yuboring:", { reply_markup: submenu1Keyboard });
 });
 
 bot.hears("🔍 Internet Qidiruv", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "search" }, { upsert: true });
   await ctx.reply("🔍 **Internet Qidiruv:**\nNimani qidirmoqchisiz? Kalit so'z yoki savolingizni yuboring:", { reply_markup: submenu1Keyboard });
 });
 
 bot.hears("🎬 Kino Topish", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "movie" }, { upsert: true });
   await ctx.reply("🎬 **Kino Topish:**\nQaysi kino yoki serialni qidiryapsiz? Nomini yozing:", { reply_markup: submenu1Keyboard });
 });
+
+// ================= BO'LIM 2: MEDIA VA YARATISH =================
 
 bot.hears("🎥 Media va Yaratish", async (ctx) => {
   await ctx.reply("🎥 **Media va Yaratish bo'limi:**\nKerakli xizmatni tanlang:", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🎨 Rasm Yaratish", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "image_gen" }, { upsert: true });
   await ctx.reply("🎨 **Rasm Yaratish:**\nYaratilishi kerak bo'lgan rasm tasvirini batafsil yozib yuboring:", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🖼 Rasm va Video O'qish", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "vision" }, { upsert: true });
   await ctx.reply("🖼 **Rasm va Video O'qish:**\nMenga rasm yoki video yuboring, uni tahlil qilib beraman.", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🔴 Dumaloq Video", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "video_note" }, { upsert: true });
-  await ctx.reply("🔴 **Dumaloq Video:**\nMenga oddiy video yuboring, uni dumaloq shaklga o'tkazib beraman.", { reply_markup: submenu2Keyboard });
+  await ctx.reply("🔴 **Dumaloq Video (`video_note`):**\nMenga oddiy video yuboring, uni dumaloq shaklga o'tkazib beraman.", { reply_markup: submenu2Keyboard });
 });
 
 bot.hears("🔗 Link orqali Yuklash", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "downloader" }, { upsert: true });
-  await ctx.reply("🔗 **Media Yuklovchi:**\nRasm yoki video havolasini yuboring, uni yuklab beraman.", { reply_markup: submenu2Keyboard });
+  await ctx.reply("🔗 **Media Yuklovchi:**\nRasm yoki video havolasini (linkini) yuboring, uni yuklab beraman.", { reply_markup: submenu2Keyboard });
 });
+
+// ================= BO'LIM 3: KOD VA INSTRUMENTLAR =================
 
 bot.hears("💻 Kod va Instrumentlar", async (ctx) => {
   await ctx.reply("💻 **Kod va Instrumentlar bo'limi:**\nKerakli vositani tanlang:", { reply_markup: submenu3Keyboard });
 });
 
 bot.hears("💻 Kod Yozish", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "coding" }, { upsert: true });
   await ctx.reply("💻 **Kod Yozish Assistent:**\nQaysi tilda va qanday vazifa uchun kod yozish kerakligini ayting:", { reply_markup: submenu3Keyboard });
 });
 
 bot.hears("🧠 Claude AI", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "claude" }, { upsert: true });
-  await ctx.reply("🧠 **Claude AI Rejimi:**\nClaude AI modeli orqali tahlil qilish uchun savol yuboring:", { reply_markup: submenu3Keyboard });
+  await ctx.reply("🧠 **Claude AI Rejimi:**\nClaude AI modeli orqali chuqur tahlil va muloqot qilish uchun savol yuboring:", { reply_markup: submenu3Keyboard });
 });
 
 bot.hears("📁 Fayl O'qish", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "file_read" }, { upsert: true });
   await ctx.reply("📁 **Fayl Tahlilchisi:**\nHujjat, kod fayli yoki matnli fayl tashlang, uni o'qib tushuntirib beraman.", { reply_markup: submenu3Keyboard });
 });
 
 bot.hears("🌐 Tarjima", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "translate" }, { upsert: true });
   await ctx.reply("🌐 **Tarjimon:**\nTarjima qilinishi kerak bo'lgan matnni va qaysi tilga o'girish kerakligini yuboring:", { reply_markup: submenu3Keyboard });
 });
 
+// 🎮 MOD OYUNLAR LOGIKASI
 bot.hears("🎮 Mod Oyunlar", async (ctx) => {
-  await User.findOneAndUpdate({ telegramId: ctx.from.id }, { currentMode: "mod_games" }, { upsert: true });
   await ctx.reply("🎮 **Modli O'yinlar Qidiruvi:**\nO'zingizga kerakli o'yin nomini yozing. Men uning mod/apk faylini yoki yuklash linkini topib beraman:", { reply_markup: submenu3Keyboard });
 });
+
+// ================= BO'LIM 4: BIZNES AVTO-JAVOB & MIJOZLAR =================
 
 bot.hears("🤖 Biznes Avto-javob", async (ctx) => {
   await ctx.reply("🤖 **Telegram Business Avto-javob Sozlamalari:**", { reply_markup: submenu4Keyboard });
@@ -252,10 +244,12 @@ bot.hears("✏️ Matnni Tahrirlash", async (ctx) => {
   await ctx.reply("📝 **Mijozlarga 1-marta yuboriladigan javob matnini yuboring:**\n(Masalan: *Hozir bandman, tez orada javob beraman*)", { reply_markup: submenu4Keyboard });
 });
 
+// 📋 MIJOZLAR TARIXI (BIZNES - FAQAT EGASIGA KO'RINADI)
 bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
   try {
     const userId = ctx.from.id;
     const user = await User.findOne({ telegramId: userId });
+
     const isOwner = user && (user.businessConnectionId || user.telegramId === userId);
 
     if (!isOwner) {
@@ -305,6 +299,8 @@ bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
   }
 });
 
+// ================= BO'LIM 5: MULOQOT TARIXI =================
+
 bot.hears("📜 Muloqot Tarixi", async (ctx) => {
   try {
     const userId = ctx.from.id;
@@ -334,7 +330,7 @@ bot.hears("✨ Tez kunda (Bo'sh)", async (ctx) => {
   await ctx.reply("✨ Hali bo'sh", { reply_markup: mainMenuKeyboard });
 });
 
-// ================= MEDIA VA KONTAKT HANDLERLARI =================
+// ================= KONTAKT VA LOKATSIYA HANDLERLARI =================
 
 bot.on("message:contact", async (ctx) => {
   try {
@@ -361,35 +357,7 @@ bot.on("message:contact", async (ctx) => {
   }
 });
 
-bot.on("message:video", async (ctx) => {
-  try {
-    const user = await User.findOne({ telegramId: ctx.from.id });
-    if (user && user.currentMode === "video_note") {
-      const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...", { reply_markup: mainMenuKeyboard });
-      try {
-        await ctx.replyWithVideoNote(ctx.message.video.file_id);
-        await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-      } catch (err) {
-        await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-        await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Videongiz yuklab olindi!" });
-      }
-      return;
-    }
-    await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Siz yuborgan video", reply_markup: mainMenuKeyboard });
-  } catch (error) {
-    logger.error(`Video handler error: ${error.message}`);
-  }
-});
-
-bot.on("message:photo", async (ctx) => {
-  await ctx.reply("🖼 Rasm qabul qilindi va tahlil uchun tayyorlandi!", { reply_markup: mainMenuKeyboard });
-});
-
-bot.on("message:document", async (ctx) => {
-  await ctx.reply("📁 Hujjat/Fayl qabul qilindi. Tahlil qilinmoqda...", { reply_markup: mainMenuKeyboard });
-});
-
-// ================= BIZNES XABARLAR LOGIKASI =================
+// ================= BIZNES XABARLAR VA MUKAMMAL AI LIMIT LOGIKASI =================
 
 bot.on("business_connection", async (ctx) => {
   try {
@@ -486,97 +454,64 @@ bot.on("business_message", async (ctx) => {
 
     await ctx.reply(finalReply, { business_connection_id: message.business_connection_id });
 
+    await bot.api.sendMessage(
+      owner.telegramId,
+      `💬 **Biznes Yozishuv:**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n📥 **U yozdi:** "${text}"\n📤 **AI Javobi (${aiRepliesCount + 1}/3):** "${finalReply}"`,
+      { parse_mode: "HTML" }
+    ).catch(() => {});
+
   } catch (error) {
     logger.error(`Business message error: ${error.message}`);
   }
 });
 
-// ================= MATNLI XABARLAR (REJIMLAR VA KINO/QIDIRUV TIZIMI) =================
+// ================= MEDIA VA FAYLLARNI QABUL QILISH =================
 
-bot.on("message:text", async (ctx) => {
+bot.on("message:video", async (ctx) => {
+  try {
+    const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...");
+    try {
+      await ctx.replyWithVideoNote(ctx.message.video.file_id);
+      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+    } catch (err) {
+      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
+      await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Videongiz yuklandi!" });
+    }
+  } catch (error) {
+    logger.error(`Video handler error: ${error.message}`);
+  }
+});
+
+bot.on("message:photo", async (ctx) => {
+  await ctx.reply("🖼 Rasm qabul qilindi va tahlil uchun tayyorlandi!", { reply_markup: mainMenuKeyboard });
+});
+
+bot.on("message:document", async (ctx) => {
+  await ctx.reply("📁 Hujjat/Fayl qabul qilindi. Tahlil qilinmoqda...", { reply_markup: mainMenuKeyboard });
+});
+
+// ================= MATNLI XABARLAR VA SHAXSIY AI CHAT =================
+
+bot.on("message:text", async (ctx, next) => {
   try {
     const userId = ctx.from.id;
-    const text = ctx.message.text;
-    
-    let user = await User.findOne({ telegramId: userId });
-    if (!user) {
-      user = await User.create({ telegramId: userId, currentMode: "ai_chat" });
-    }
+    const user = await User.findOne({ telegramId: userId });
 
-    // 1. Biznes tahrirlash holati
-    if (user.waitingForInstruction) {
-      user.businessInstruction = text;
+    if (user && user.waitingForInstruction) {
+      user.businessInstruction = ctx.message.text;
       user.waitingForInstruction = false;
       user.autoReplyActive = true;
       await user.save();
 
-      await ctx.reply(`✅ **Avto-javob matningiz saqlandi va yoqildi!**\n\nYangi matn:\n"${text}"`, { reply_markup: mainMenuKeyboard });
+      await ctx.reply(`✅ **Avto-javob matningiz saqlandi va yoqildi!**\n\nYangi matn:\n"${ctx.message.text}"`, { reply_markup: mainMenuKeyboard });
       return;
     }
-
-    const mode = user.currentMode || "ai_chat";
-
-    // 2. Rasm Yaratish Rejimi (DALL-E)
-    if (mode === "image_gen") {
-      const waitMsg = await ctx.reply("🎨 Rasm yaratilmoqda, iltimos kuting...");
-      const imageUrl = await generateImage(text);
-      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-      
-      if (imageUrl) {
-        await ctx.replyWithPhoto(imageUrl, { caption: "🎨 AI tomonidan yaratilgan rasm!", reply_markup: mainMenuKeyboard });
-      } else {
-        await ctx.reply("❌ Rasm yaratishda xatolik yuz berdi.", { reply_markup: mainMenuKeyboard });
-      }
-      return;
-    }
-
-    // 3. Claude AI Rejimi
-    if (mode === "claude") {
-      const waitMsg = await ctx.reply("🧠 Claude AI tahlil qilmoqda, biroz kuting...");
-      await Memory.create({ telegramId: userId, role: "user", content: text });
-      const claudeReply = await queryClaude(text) || "Claude AI javob berishda xatolik yuz berdi.";
-      await ctx.api.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-      await Memory.create({ telegramId: userId, role: "assistant", content: claudeReply });
-      await ctx.reply(claudeReply, { parse_mode: "Markdown", reply_markup: mainMenuKeyboard });
-      return;
-    }
-
-    let systemInstruction = "";
-
-    // 4. BARCHA REJIMLAR UCHUN QAT'IY KO'RSATMALAR (Kino va Qidiruv aniq ishlashi uchun)
-    if (mode === "movie") {
-      systemInstruction = `Sen professional kino va seriallar bo'yicha mutaxassissansan. Foydalanuvchi qaysi kino yoki serial nomini yozsa, o'sha kino haqida batafsil ma'lumot (chiqqan yili, rejissyor, bosh rollar, mazmuni) va uni internetdan topish yoki ko'rish uchun ishonchli tavsiyalar/havolalarni ber.`;
-    } else if (mode === "search") {
-      systemInstruction = "Sen internet qidiruv assistentisan. Foydalanuvchi so'ragan mavzu, yangilik yoki savol bo'yicha internetdagi eng aniq faktlarni va batafsil ma'lumotlarni yoritib ber.";
-    } else if (mode === "coding") {
-      systemInstruction = "Sen tajribali dasturlash assistentisan. Kod yozish va xatolarni to'g'rilashda yordam ber.";
-    } else if (mode === "translate") {
-      systemInstruction = "Sen professional tarjimonsan. Berilgan matnni boshqa tilga xatosiz va chiroyli tarjima qil.";
-    } else if (mode === "mod_games") {
-      systemInstruction = "Sen mobil o'yinlar va modlar bo'yicha yordamchisan. O'yinlar haqida ma'lumot va mod linklarini ber.";
-    } else {
-      systemInstruction = "Sen Telegram botdagi shaxsiy AI yordamchisan. Savollarga qisqa, aniq va do'stona javob ber.";
-    }
-
-    // Xotiraga yozish va AI dan javob olish
-    await Memory.create({ telegramId: userId, role: "user", content: text });
-
-    const promptMessages = [
-      { role: "system", content: systemInstruction },
-      { role: "user", content: text }
-    ];
-
-    const aiReply = await queryAI(promptMessages, user.language || "uz") || "Javob olishda xatolik yuz berdi.";
-
-    await Memory.create({ telegramId: userId, role: "assistant", content: aiReply });
-
-    await ctx.reply(aiReply, { parse_mode: "Markdown", reply_markup: mainMenuKeyboard });
-
   } catch (error) {
-    logger.error(`Text message error: ${error.message}`);
-    await ctx.reply("❌ Xatolik yuz berdi, qaytadan urinib ko'ring.", { reply_markup: mainMenuKeyboard });
+    logger.error(`Instruction text error: ${error.message}`);
   }
-});
+
+  return next();
+}, chatHandler);
 
 bot.catch((err) => {
   logger.error(`Global Bot Error: ${err.message}`);
@@ -587,4 +522,4 @@ bot.catch((err) => {
 });
 
 bot.start();
-logger.info("Telegram Bot successfully started with all 500+ lines fully functional!");
+logger.info("Telegram Bot successfully started with advance AI logic & design");
