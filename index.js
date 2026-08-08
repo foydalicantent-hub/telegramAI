@@ -1,27 +1,39 @@
 import { Bot } from "grammy";
+import http from "http";
 
 import { config, assertRequiredConfig } from "./env.js";
-import { connectDB } from "./database/connect.js";
-import { logger } from "./utils/logger.js";
+import { connectDB } from "./connect.js";
+import { logger } from "./logger.js";
 
-import { startCommand } from "./commands/start.js";
-import { helpCommand } from "./commands/help.js";
-import { languageCommand, languageCallback } from "./commands/language.js";
-import { cleanCommand } from "./commands/clean.js";
-import { historyCommand } from "./commands/history.js";
-import { muammoCommand } from "./commands/feedback.js";
-import { grantCommand } from "./commands/adminGrant.js";
-import { chatHandler } from "./commands/chat.js";
-import { mainMenuKeyboard } from "./keyboards/mainMenu.js";
-import { getOrCreateUser } from "./services/userService.js";
-import { ensureLanguage, User } from "./models/User.js";
-import { Memory } from "./models/Memory.js";
-import { queryAI } from "./services/aiService.js";
+import { startCommand } from "./start.js";
+import { helpCommand } from "./help.js";
+import { languageCommand, languageCallback } from "./language.js";
+import { cleanCommand } from "./clean.js";
+import { historyCommand } from "./history.js";
+import { muammoCommand } from "./feedback.js";
+import { grantCommand } from "./adminGrant.js";
+import { chatHandler } from "./chat.js";
+import { mainMenuKeyboard } from "./mainMenu.js";
+import { getOrCreateUser } from "./userService.js";
+import { ensureLanguage, User } from "./User.js";
+import { Memory } from "./Memory.js";
+import { queryAI } from "./aiService.js";
 
 assertRequiredConfig();
 await connectDB();
 
 const bot = new Bot(config.botToken);
+
+// Render portini ushlab turuvchi HTTP server
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Bot is running smoothly!");
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  logger.info(`HTTP server is listening on port ${PORT}`);
+});
 
 await bot.api.setMyCommands([
   { command: "start", description: "Botni ishga tushirish" },
