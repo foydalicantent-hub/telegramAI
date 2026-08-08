@@ -27,7 +27,7 @@ const server = http.createServer((req, res) => {
   res.end("Bot is running smoothly!");
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT  3000;
 server.listen(PORT, () => {
   logger.info(`HTTP server is listening on port ${PORT}`);
 });
@@ -218,8 +218,7 @@ bot.hears("🎮 Mod Oyunlar", async (ctx) => {
 bot.hears("🤖 Biznes Avto-javob", async (ctx) => {
   await ctx.reply("🤖 **Telegram Business Avto-javob Sozlamalari:**", { reply_markup: submenu4Keyboard });
 });
-
-bot.hears("🟢 Yoqish", async (ctx) => {
+ bot.hears("🟢 Yoqish", async (ctx) => {
   try {
     const userId = ctx.from.id;
     await User.findOneAndUpdate({ telegramId: userId }, { autoReplyActive: true }, { upsert: true });
@@ -250,7 +249,8 @@ bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
     const userId = ctx.from.id;
     const user = await User.findOne({ telegramId: userId });
 
-    const isOwner = user && (user.businessConnectionId || user.telegramId === userId);
+    // Tekshiramiz: Bu foydalanuvchi biznes akkaunt egasimi?
+    const isOwner = user && (user.businessConnectionId  user.telegramId === userId);
 
     if (!isOwner) {
       await ctx.reply("✨ Hali bo'sh", { reply_markup: submenu4Keyboard });
@@ -262,7 +262,7 @@ bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
       content: { $regex: /Mijoz ID/ }
     }).sort({ createdAt: -1 });
 
-    if (!memories || memories.length === 0) {
+    if (!memories  memories.length === 0) {
       await ctx.reply("📂 Hozircha saqlangan biznes mijozlar tarixi yo'q.", { reply_markup: submenu4Keyboard });
       return;
     }
@@ -299,7 +299,7 @@ bot.hears("📋 Mijozlar Tarixi (Biznes)", async (ctx) => {
   }
 });
 
-// ================= BO'LIM 5: MULOQOT TARIXI =================
+// ================= BO'LIM 5: MULOQOT TARIXI (UMUMIY FOYDALANUVCHILAR) =================
 
 bot.hears("📜 Muloqot Tarixi", async (ctx) => {
   try {
@@ -308,12 +308,12 @@ bot.hears("📜 Muloqot Tarixi", async (ctx) => {
       .sort({ createdAt: -1 })
       .limit(15);
 
-    if (!memories || memories.length === 0) {
+    if (!memories  memories.length === 0) {
       await ctx.reply("📂 Sizning bot bilan bo'lgan muloqot tarixingiz topilmadi.", { reply_markup: mainMenuKeyboard });
       return;
     }
 
-    let text = "📜 **Sizning Bot Bilan Muloqot Tarixingiz:**\n\n";
+    let text = "📜 Sizning Bot Bilan Muloqot Tarixingiz:**\n\n";
     memories.reverse().forEach((m, i) => {
       const sender = m.role === "user" ? "👤 Siz" : "🤖 AI";
       text += `${i + 1}. ${sender}: ${m.content.substring(0, 80)}\n`;
@@ -326,7 +326,8 @@ bot.hears("📜 Muloqot Tarixi", async (ctx) => {
   }
 });
 
-bot.hears("✨ Tez kunda (Bo'sh)", async (ctx) => {
+// ================= BO'LIM 6: TEZ KUNDA =================
+[07/08/2026 16:49] ꧁༒𓆩𝕃𝕒𝕫𝕚𝕫𝕓𝕖𝕜𓆪༒꧂: bot.hears("✨ Tez kunda (Bo'sh)", async (ctx) => {
   await ctx.reply("✨ Hali bo'sh", { reply_markup: mainMenuKeyboard });
 });
 
@@ -350,10 +351,10 @@ bot.on("message:contact", async (ctx) => {
         content: `[Mijoz ID: ${userId}] [Ism: ${ctx.from.first_name || "Mijoz"}] Kontakt ulashdi: ${contact.phone_number}`
       });
 
-      await ctx.reply("✅ **Telefon raqamingiz muvaffaqiyatli saqlandi!**", { reply_markup: mainMenuKeyboard });
+      await ctx.reply("✅ **Telefon raqamingiz muvaffaqiyatli saqlandi!", { reply_markup: mainMenuKeyboard });
     }
   } catch (err) {
-    logger.error(`Contact handling error: ${err.message}`);
+    logger.error(Contact handling error: ${err.message});
   }
 });
 
@@ -374,7 +375,7 @@ bot.on("business_connection", async (ctx) => {
       });
     }
   } catch (err) {
-    logger.error(`Business connection error: ${err.message}`);
+    logger.error(Business connection error: ${err.message});
   }
 });
 
@@ -383,7 +384,7 @@ bot.on("business_message", async (ctx) => {
     const message = ctx.businessMessage;
     const text = message.text || "";
     const senderId = message.from ? message.from.id : null;
-    const senderName = message.from ? `${message.from.first_name || ""} ${message.from.last_name || ""}`.trim() : "Mijoz";
+    const senderName = message.from ? ${message.from.first_name || ""} ${message.from.last_name || ""}.trim() : "Mijoz";
 
     if (!senderId) return;
 
@@ -392,27 +393,31 @@ bot.on("business_message", async (ctx) => {
       owner = await User.findOne({ businessConnectionId: { $exists: true, $ne: "" } }).sort({ updatedAt: -1 });
     }
 
-    if (!owner || owner.autoReplyActive === false) return;
+    if (!owner  owner.autoReplyActive === false) return;
 
-    if (message.is_outgoing || (message.from && message.from.id === owner.telegramId)) {
+    // 1. SHART: Agar xabar AKKAUNT EGASI tomonidan yozilgan bo'lsa (Outgoing)
+    if (message.is_outgoing  (message.from && message.from.id === owner.telegramId)) {
+      // Egasi mijozga javob berganini bazada belgilaymiz (AI HISOBINI RESET QILADI)
       await Memory.create({
         telegramId: owner.telegramId,
         role: "owner_reply",
-        content: `[Mijoz ID: ${senderId}] Akkaunt egasi javob yozdi: ${text}`
+        content: [Mijoz ID: ${senderId}] Akkaunt egasi javob yozdi: ${text}
       });
-      return;
+      return; // AI o'zi yozgan xabarga qayta javob bermaydi
     }
 
+    // 2. SHART: Egasining eng oxirgi javob xabarini izlaymiz
     const lastOwnerReply = await Memory.findOne({
       telegramId: owner.telegramId,
       role: "owner_reply",
-      content: { $regex: `\\[Mijoz ID: ${senderId}\\]` }
+      content: { $regex: \\[Mijoz ID: ${senderId}\\] }
     }).sort({ createdAt: -1 });
 
+    // Egasi oxirgi marta yozganidan beri AI nechta javob berganini hisoblaymiz
     const filter = {
       telegramId: owner.telegramId,
       role: "assistant",
-      content: { $regex: `\\[Mijoz ID: ${senderId}\\]` }
+      content: { $regex: \\[Mijoz ID: ${senderId}\\] }
     };
 
     if (lastOwnerReply) {
@@ -421,19 +426,21 @@ bot.on("business_message", async (ctx) => {
 
     const aiRepliesCount = await Memory.countDocuments(filter);
 
+    // 3. SHART: AI hisoblagichi 3 ga yetgan bo'lsa, AI BOSHQA YOZMAYDI! (Egasi yozguncha to'xtaydi)
     if (aiRepliesCount >= 3) {
+      // Faqat egasiga mijoz yozayotgani haqida bildirishnoma boradi
       await bot.api.sendMessage(
-        owner.telegramId,
-        `📩 **Mijoz yozdi (AI to'xtatilgan, 3 marta javob berib bo'lindi):**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n💬 **Xabar:** "${text}"`,
+        owner.telegramId, 📩 **Mijoz yozdi (AI to'xtatilgan, 3 marta javob berib bo'lindi):**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n💬 **Xabar:** "${text}",
         { parse_mode: "HTML" }
       ).catch(() => {});
       return;
     }
 
+    // AI Javobini shakllantirish
     let finalReply = "";
 
     if (aiRepliesCount === 0) {
-      finalReply = owner.businessInstruction || "Bandman, tez orada bog'lanaman.";
+      finalReply = owner.businessInstruction  "Bandman, tez orada bog'lanaman.";
     } else {
       const phoneText = owner.phoneNumber ? ` Telefon raqami: ${owner.phoneNumber}.` : "";
       const systemPrompt = `Sen Telegram foydalanuvchisining shaxsiy biznes assistentisan. Akaunt egasi hozir band.\nAkaunt egasi ma'lumotlari:${phoneText}\nQOIDALAR:\n1. Mijoz so'roviga tabiiy va qisqa javob ber.\n2. O'zingni bot deb tanishtirma.`;
@@ -443,30 +450,33 @@ bot.on("business_message", async (ctx) => {
         { role: "user", content: text }
       ];
 
-      finalReply = await queryAI(promptMessages, owner.language || "uz") || "Tushunarli, tez orada bog'lanamiz.";
+      finalReply = await queryAI(promptMessages, owner.language  "uz") || "Tushunarli, tez orada bog'lanamiz.";
     }
 
+    // AI Javobini saqlaymiz va mijozga yuboramiz
     await Memory.create({
       telegramId: owner.telegramId,
       role: "assistant",
-      content: `[Mijoz ID: ${senderId}] [Ism: ${senderName}] ${finalReply}`
+      content: [Mijoz ID: ${senderId}] [Ism: ${senderName}] ${finalReply}
     });
 
     await ctx.reply(finalReply, { business_connection_id: message.business_connection_id });
 
+    // Bot egasiga bildirishnoma
     await bot.api.sendMessage(
       owner.telegramId,
-      `💬 **Biznes Yozishuv:**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n📥 **U yozdi:** "${text}"\n📤 **AI Javobi (${aiRepliesCount + 1}/3):** "${finalReply}"`,
+      💬 **Biznes Yozishuv:**\n👤 **Mijoz:** ${senderName} (ID: <code>${senderId}</code>)\n📥 **U yozdi:** "${text}"\n📤 **AI Javobi (${aiRepliesCount + 1}/3):** "${finalReply}",
       { parse_mode: "HTML" }
     ).catch(() => {});
 
   } catch (error) {
-    logger.error(`Business message error: ${error.message}`);
+    logger.error(Business message error: ${error.message});
   }
 });
 
 // ================= MEDIA VA FAYLLARNI QABUL QILISH =================
 
+// Dumaloq Video (video_note)
 bot.on("message:video", async (ctx) => {
   try {
     const waitMsg = await ctx.reply("🔄 Video dumaloq shaklga keltirilmoqda...");
@@ -478,14 +488,16 @@ bot.on("message:video", async (ctx) => {
       await ctx.replyWithVideo(ctx.message.video.file_id, { caption: "📹 Videongiz yuklandi!" });
     }
   } catch (error) {
-    logger.error(`Video handler error: ${error.message}`);
+    logger.error(Video handler error: ${error.message});
   }
 });
 
+// Rasm o'qish
 bot.on("message:photo", async (ctx) => {
   await ctx.reply("🖼 Rasm qabul qilindi va tahlil uchun tayyorlandi!", { reply_markup: mainMenuKeyboard });
 });
 
+// Fayl o'qish
 bot.on("message:document", async (ctx) => {
   await ctx.reply("📁 Hujjat/Fayl qabul qilindi. Tahlil qilinmoqda...", { reply_markup: mainMenuKeyboard });
 });
@@ -497,24 +509,25 @@ bot.on("message:text", async (ctx, next) => {
     const userId = ctx.from.id;
     const user = await User.findOne({ telegramId: userId });
 
+    // Tahrirlash rejimi kutilayotgan bo'lsa
     if (user && user.waitingForInstruction) {
       user.businessInstruction = ctx.message.text;
       user.waitingForInstruction = false;
       user.autoReplyActive = true;
       await user.save();
 
-      await ctx.reply(`✅ **Avto-javob matningiz saqlandi va yoqildi!**\n\nYangi matn:\n"${ctx.message.text}"`, { reply_markup: mainMenuKeyboard });
+      await ctx.reply(✅ **Avto-javob matningiz saqlandi va yoqildi!**\n\nYangi matn:\n"${ctx.message.text}", { reply_markup: mainMenuKeyboard });
       return;
     }
   } catch (error) {
-    logger.error(`Instruction text error: ${error.message}`);
+    logger.error(Instruction text error: ${error.message});
   }
 
   return next();
 }, chatHandler);
 
 bot.catch((err) => {
-  logger.error(`Global Bot Error: ${err.message}`);
+  logger.error(Global Bot Error: ${err.message});
   const ctx = err.ctx;
   if (ctx) {
     ctx.reply("🙏 Tizimda xatolik yuz berdi.", { reply_markup: mainMenuKeyboard }).catch(() => {});
