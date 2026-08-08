@@ -1,9 +1,9 @@
-import { Keyboard } from "grammy";
-
-export const mainMenuKeyboard = new Keyboard()
-  .text("🌐 AI va Qidiruv").text("🎥 Media va Yaratish")
-  .row()
-  .text("💻 Kod va Instrumentlar").text("⚡️ Biznes Avto-javob")
-  .row()
-  .text("📜 Muloqot Tarixi").text("✨ Tez kunda (Bo'sh)")
-  .resized();
+export const mainMenuKeyboard = {
+  keyboard: [
+    [{ text: "🤖 AI Chat" }, { text: "🎬 Kino Qidirish" }],
+    [{ text: "🔍 Internet Qidiruv" }, { text: "🔴 Dumaloq Video" }],
+    [{ text: "📜 Muloqot Tarixi" }, { text: "⚙️ Sozlamalar" }],
+    [{ text: "📞 Avto-javob sozlash (Kontakt yuborish)" }]
+  ],
+  resize_keyboard: true
+};
