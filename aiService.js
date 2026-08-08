@@ -77,8 +77,6 @@ export async function queryAI(history, lang) {
   throw new Error("All AI providers failed");
 }
 
-// ================= YANGI QO'SHILGAN FUNKSIYALAR =================
-
 /**
  * 🎨 Rasm Yaratish (OpenAI DALL-E 3)
  */
@@ -142,5 +140,43 @@ export async function queryClaude(prompt) {
   } catch (error) {
     logger.error(`Claude AI error: ${error.message}`);
     return "❌ Claude AI bilan bog'lanishda xatolik yuz berdi.";
+  }
+}
+
+/**
+ * 🎬 Kino qidirish xizmati
+ */
+export async function searchMovie(movieName) {
+  try {
+    const messages = [
+      { 
+        role: "system", 
+        content: "Sen professional kino ekspertisan. Foydalanuvchi yozgan kino yoki serial haqida aniq ma'lumot ber: nomi, chiqqan yili, rejissyori, bosh rollar, qisqacha mazmuni va uni qayerdan topish mumkinligi." 
+      },
+      { role: "user", content: movieName }
+    ];
+    return await queryAI(messages, "uz");
+  } catch (error) {
+    logger.error(`Movie search error: ${error.message}`);
+    return "❌ Kino qidirishda xatolik yuz berdi.";
+  }
+}
+
+/**
+ * 🔍 Internet qidiruv xizmati
+ */
+export async function searchInternet(query) {
+  try {
+    const messages = [
+      { 
+        role: "system", 
+        content: "Sen internet qidiruv assistentisan. Foydalanuvchi so'roviga eng aniq, ishonchli va so'nggi ma'lumotlarga asoslanib javob ber." 
+      },
+      { role: "user", content: query }
+    ];
+    return await queryAI(messages, "uz");
+  } catch (error) {
+    logger.error(`Internet search error: ${error.message}`);
+    return "❌ Internetdan qidirishda xatolik yuz berdi.";
   }
 }
