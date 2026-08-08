@@ -13,8 +13,8 @@ import { historyCommand } from "./history.js";
 import { muammoCommand } from "./feedback.js";
 import { grantCommand } from "./adminGrant.js";
 import { chatHandler } from "./chat.js";
-import { ensureLanguage, User } from "./models/User.js";
-import { Memory } from "./models/Memory.js";
+import { ensureLanguage, User } from "./User.js";
+import { Memory } from "./Memory.js";
 import { queryAI } from "./aiService.js";
 
 assertRequiredConfig();
