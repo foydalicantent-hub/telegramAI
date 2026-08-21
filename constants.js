@@ -10,19 +10,32 @@ export const MEMORY_HISTORY_LIMIT = 20;
 
 export const HISTORY_DISPLAY_LIMIT = 10;
 
+/*
+ * AI modellari
+ *
+ * Gemini:
+ * gemini-2.5-flash — Google'ning barqaror 2.5 Flash modeli.
+ */
 export const AI_MODELS = {
-  // Groq
   GROQ: "openai/gpt-oss-120b",
 
-  // OpenRouter
   OPENROUTER_FALLBACK: "openrouter/free",
 
-  // Gemini
   GEMINI: "gemini-2.5-flash",
 
-  // Claude
   CLAUDE: "claude-sonnet-4-5",
 
-  // OpenAI
-  OPENAI: "gpt-5-mini",
+  OPENAI: "gpt-5.6-luna",
+};
+
+/*
+ * Faqat AI tanlash menyusi uchun.
+ */
+export const AI_PROVIDERS = {
+  auto: "🔄 Auto",
+  groq: "⚡ Groq",
+  openrouter: "🌐 OpenRouter",
+  gemini: "✨ Gemini 2.5 Flash",
+  claude: "🧠 Claude",
+  openai: "🤖 OpenAI",
 };
