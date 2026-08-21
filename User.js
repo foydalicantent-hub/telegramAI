@@ -28,40 +28,22 @@ const userSchema = new mongoose.Schema(
       default: "uz",
     },
 
-    /*
-     * ai
-     * movie
-     * search
-     * circle
-     * ai_select
-     */
     mode: {
       type: String,
       default: "ai",
     },
 
-    /*
-     * Foydalanuvchi tanlagan AI.
-     *
-     * auto       = fallback
-     * groq       = faqat Groq
-     * openrouter = faqat OpenRouter
-     * gemini     = faqat Gemini
-     * claude     = faqat Claude
-     * openai     = faqat OpenAI
-     */
+    // auto:
+    // groq
+    // cerebras
+    // gemini
+    // mistral
+    // cohere
+    // huggingface
+    // openrouter
+    // claude
     aiProvider: {
       type: String,
-
-      enum: [
-        "auto",
-        "groq",
-        "openrouter",
-        "gemini",
-        "claude",
-        "openai",
-      ],
-
       default: "auto",
     },
 
@@ -90,7 +72,7 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    // TELEGRAM BUSINESS / KOTIB REJIMI
+    // Telegram Business
     businessConnectionId: {
       type: String,
       default: "",
@@ -118,23 +100,6 @@ const userSchema = new mongoose.Schema(
 
 export function ensureLanguage(user) {
   return user.language || "uz";
-}
-
-export function ensureAIProvider(user) {
-  const allowed = [
-    "auto",
-    "groq",
-    "openrouter",
-    "gemini",
-    "claude",
-    "openai",
-  ];
-
-  if (!allowed.includes(user.aiProvider)) {
-    user.aiProvider = "auto";
-  }
-
-  return user.aiProvider;
 }
 
 export async function refreshPremiumStatus(user) {
