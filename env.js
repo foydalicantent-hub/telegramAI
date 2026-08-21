@@ -43,6 +43,41 @@ export const config = {
     omdb:
       process.env.OMDB_API_KEY || null,
   },
+
+  /*
+   * Timeoutlarni juda katta qilmaymiz.
+   * Shuning uchun Auto rejimida ishlamaydigan provider
+   * botni uzoq ushlab turmaydi.
+   */
+  timeouts: {
+    groq: Number(process.env.GROQ_TIMEOUT || 12000),
+    openrouter: Number(process.env.OPENROUTER_TIMEOUT || 12000),
+    gemini: Number(process.env.GEMINI_TIMEOUT || 15000),
+    claude: Number(process.env.CLAUDE_TIMEOUT || 15000),
+    openai: Number(process.env.OPENAI_TIMEOUT || 15000),
+  },
+
+  models: {
+    groq:
+      process.env.GROQ_MODEL ||
+      "openai/gpt-oss-120b",
+
+    openrouter:
+      process.env.OPENROUTER_MODEL ||
+      "openrouter/free",
+
+    gemini:
+      process.env.GEMINI_MODEL ||
+      "gemini-2.5-flash",
+
+    claude:
+      process.env.CLAUDE_MODEL ||
+      "claude-sonnet-4-5",
+
+    openai:
+      process.env.OPENAI_MODEL ||
+      "gpt-5.6-luna",
+  },
 };
 
 export function assertRequiredConfig() {
@@ -56,7 +91,6 @@ export function assertRequiredConfig() {
     missing.push("MONGO_URI");
   }
 
-  // Kamida BITTA AI provider bo'lishi kerak
   const hasAI =
     config.keys.groq ||
     config.keys.openrouter ||
