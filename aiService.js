@@ -1,12 +1,7 @@
-```js
 import axios from "axios";
 import { config } from "./env.js";
 import { AI_MODELS } from "./constants.js";
 import { logger } from "./logger.js";
-
-/* =========================================================
-   TILLAR
-========================================================= */
 
 const LANGUAGE_NAMES = {
   uz: "Uzbek",
@@ -14,25 +9,20 @@ const LANGUAGE_NAMES = {
   en: "English",
 };
 
-/* =========================================================
-   SYSTEM PROMPT
-========================================================= */
-
 function systemPrompt(lang) {
   const languageName = LANGUAGE_NAMES[lang] || "Uzbek";
 
   return {
     role: "system",
-    content:
-      `You are a helpful, friendly assistant inside a Telegram bot. ` +
-      `Always reply in ${languageName}, regardless of the language used earlier, ` +
-      `unless the user explicitly asks you to switch languages. ` +
-      `Keep answers concise, useful and clear.`,
+    content: `You are a helpful, friendly assistant inside a Telegram bot.
+Always reply in ${languageName}, regardless of the language used earlier,
+unless the user explicitly asks you to switch languages.
+Keep answers concise, useful and clear.`,
   };
 }
 
 /* =========================================================
-   1. GROQ
+   GROQ
 ========================================================= */
 
 async function callGroq(messages) {
@@ -59,14 +49,14 @@ async function callGroq(messages) {
   const answer = res.data?.choices?.[0]?.message?.content;
 
   if (!answer || !answer.trim()) {
-    throw new Error("Groq returned an empty response");
+    throw new Error("Groq returned empty response");
   }
 
   return answer.trim();
 }
 
 /* =========================================================
-   2. OPENROUTER
+   OPENROUTER
 ========================================================= */
 
 async function callOpenRouter(messages) {
@@ -80,7 +70,6 @@ async function callOpenRouter(messages) {
       model:
         AI_MODELS.OPENROUTER_FALLBACK ||
         "openrouter/free",
-
       messages,
       temperature: 0.7,
     },
@@ -89,9 +78,11 @@ async function callOpenRouter(messages) {
         Authorization: `Bearer ${config.keys.openrouter}`,
         "Content-Type": "application/json",
         "HTTP-Referer":
-          process.env.OPENROUTER_SITE_URL || "https://telegram-ai-bot.local",
+          process.env.OPENROUTER_SITE_URL ||
+          "https://telegram-ai-bot.local",
         "X-Title":
-          process.env.OPENROUTER_APP_NAME || "Telegram AI Bot",
+          process.env.OPENROUTER_APP_NAME ||
+          "Telegram AI Bot",
       },
       timeout: 30000,
     }
@@ -100,14 +91,14 @@ async function callOpenRouter(messages) {
   const answer = res.data?.choices?.[0]?.message?.content;
 
   if (!answer || !answer.trim()) {
-    throw new Error("OpenRouter returned an empty response");
+    throw new Error("OpenRouter returned empty response");
   }
 
   return answer.trim();
 }
 
 /* =========================================================
-   3. GEMINI 2.5 FLASH
+   GEMINI 2.5 FLASH
 ========================================================= */
 
 async function callGemini(messages) {
@@ -118,13 +109,11 @@ async function callGemini(messages) {
   const model =
     AI_MODELS.GEMINI || "gemini-2.5-flash";
 
-  /* System promptni alohida olamiz */
   const systemMessages = messages
     .filter((message) => message.role === "system")
     .map((message) => String(message.content || ""))
     .join("\n\n");
 
-  /* Gemini formatiga o'tkazamiz */
   const contents = messages
     .filter((message) => message.role !== "system")
     .map((message) => ({
@@ -132,30 +121,25 @@ async function callGemini(messages) {
         message.role === "assistant"
           ? "model"
           : "user",
-
       parts: [
         {
           text: String(message.content || ""),
         },
       ],
-    }));
+    }))
+    .filter(
+      (message) =>
+        message.parts?.[0]?.text?.trim()
+    );
 
-  /*
-    Gemini conversation boshida user/model tartibi
-    noto'g'ri bo'lib qolmasligi uchun bo'sh xabarlarni olib tashlaymiz.
-  */
-  const validContents = contents.filter(
-    (item) =>
-      item.parts?.[0]?.text &&
-      item.parts[0].text.trim()
-  );
-
-  if (!validContents.length) {
-    throw new Error("Gemini received no valid messages");
+  if (!contents.length) {
+    throw new Error(
+      "Gemini received no valid messages"
+    );
   }
 
   const body = {
-    contents: validContents,
+    contents,
     generationConfig: {
       temperature: 0.7,
     },
@@ -177,16 +161,12 @@ async function callGemini(messages) {
       config.keys.gemini
     )}`;
 
-  const res = await axios.post(
-    url,
-    body,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      timeout: 30000,
-    }
-  );
+  const res = await axios.post(url, body, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    timeout: 30000,
+  });
 
   const answer =
     res.data?.candidates?.[0]?.content?.parts
@@ -195,13 +175,10 @@ async function callGemini(messages) {
       .trim();
 
   if (!answer) {
-    const finishReason =
-      res.data?.candidates?.[0]?.finishReason;
-
     throw new Error(
-      `Gemini returned an empty response${
-        finishReason
-          ? ` (${finishReason})`
+      `Gemini returned empty response${
+        res.data?.candidates?.[0]?.finishReason
+          ? ` (${res.data.candidates[0].finishReason})`
           : ""
       }`
     );
@@ -211,7 +188,7 @@ async function callGemini(messages) {
 }
 
 /* =========================================================
-   4. CLAUDE
+   CLAUDE
 ========================================================= */
 
 async function callClaude(messages) {
@@ -235,23 +212,22 @@ async function callClaude(messages) {
         message.role === "assistant"
           ? "assistant"
           : "user",
-
       content: String(message.content || ""),
     }));
 
-  const requestBody = {
+  const body = {
     model,
     max_tokens: 2048,
     messages: claudeMessages,
   };
 
   if (systemMessages) {
-    requestBody.system = systemMessages;
+    body.system = systemMessages;
   }
 
   const res = await axios.post(
     "https://api.anthropic.com/v1/messages",
-    requestBody,
+    body,
     {
       headers: {
         "x-api-key": config.keys.claude,
@@ -269,16 +245,14 @@ async function callClaude(messages) {
     ?.trim();
 
   if (!answer) {
-    throw new Error(
-      "Claude returned an empty response"
-    );
+    throw new Error("Claude returned empty response");
   }
 
   return answer;
 }
 
 /* =========================================================
-   5. OPENAI
+   OPENAI
 ========================================================= */
 
 async function callOpenAI(messages) {
@@ -306,20 +280,26 @@ async function callOpenAI(messages) {
   );
 
   const answer =
-    res.data?.choices?.[0]?.message?.content
-      ?.trim();
+    res.data?.choices?.[0]?.message?.content?.trim();
 
   if (!answer) {
-    throw new Error(
-      "OpenAI returned an empty response"
-    );
+    throw new Error("OpenAI returned empty response");
   }
 
   return answer;
 }
 
 /* =========================================================
-   UNIVERSAL AI FALLBACK
+   AI FALLBACK
+   GROQ
+   ↓
+   OPENROUTER
+   ↓
+   GEMINI 2.5 FLASH
+   ↓
+   CLAUDE
+   ↓
+   OPENAI
 ========================================================= */
 
 export async function queryAI(history, lang) {
@@ -328,34 +308,28 @@ export async function queryAI(history, lang) {
     ...history,
   ];
 
-  /* ---------------------------------------------
-     1. GROQ
-  --------------------------------------------- */
-
+  // 1. GROQ
   if (config.keys.groq) {
     try {
       const result = await callGroq(messages);
 
       if (result) {
-        logger.info(
-          "✅ AI provider: Groq"
-        );
-
+        logger.info("AI provider: Groq");
         return result;
       }
     } catch (error) {
       logger.error(
-        `❌ Groq AI error: ${
+        `Groq AI error: ${
           error.response?.status || ""
-        } ${error.response?.data?.error?.message || error.message}`
+        } ${
+          error.response?.data?.error?.message ||
+          error.message
+        }`
       );
     }
   }
 
-  /* ---------------------------------------------
-     2. OPENROUTER
-  --------------------------------------------- */
-
+  // 2. OPENROUTER
   if (config.keys.openrouter) {
     try {
       const result =
@@ -363,14 +337,13 @@ export async function queryAI(history, lang) {
 
       if (result) {
         logger.info(
-          "✅ AI provider: OpenRouter"
+          "AI provider: OpenRouter"
         );
-
         return result;
       }
     } catch (error) {
       logger.error(
-        `❌ OpenRouter AI error: ${
+        `OpenRouter AI error: ${
           error.response?.status || ""
         } ${
           error.response?.data?.error?.message ||
@@ -380,10 +353,7 @@ export async function queryAI(history, lang) {
     }
   }
 
-  /* ---------------------------------------------
-     3. GEMINI 2.5 FLASH
-  --------------------------------------------- */
-
+  // 3. GEMINI 2.5 FLASH
   if (config.keys.gemini) {
     try {
       const result =
@@ -391,14 +361,13 @@ export async function queryAI(history, lang) {
 
       if (result) {
         logger.info(
-          "✅ AI provider: Gemini 2.5 Flash"
+          "AI provider: Gemini 2.5 Flash"
         );
-
         return result;
       }
     } catch (error) {
       logger.error(
-        `❌ Gemini AI error: ${
+        `Gemini AI error: ${
           error.response?.status || ""
         } ${
           error.response?.data?.error?.message ||
@@ -408,53 +377,19 @@ export async function queryAI(history, lang) {
     }
   }
 
-  /* ---------------------------------------------
-     4. CLAUDE
-  --------------------------------------------- */
-
+  // 4. CLAUDE
   if (config.keys.claude) {
     try {
       const result =
         await callClaude(messages);
 
       if (result) {
-        logger.info(
-          "✅ AI provider: Claude"
-        );
-
+        logger.info("AI provider: Claude");
         return result;
       }
     } catch (error) {
       logger.error(
-        `❌ Claude AI error: ${
-          error.response?.status || ""
-        } ${
-          error.response?.error?.message ||
-          error.message
-        }`
-      );
-    }
-  }
-
-  /* ---------------------------------------------
-     5. OPENAI
-  --------------------------------------------- */
-
-  if (config.keys.openai) {
-    try {
-      const result =
-        await callOpenAI(messages);
-
-      if (result) {
-        logger.info(
-          "✅ AI provider: OpenAI"
-        );
-
-        return result;
-      }
-    } catch (error) {
-      logger.error(
-        `❌ OpenAI AI error: ${
+        `Claude AI error: ${
           error.response?.status || ""
         } ${
           error.response?.data?.error?.message ||
@@ -464,23 +399,39 @@ export async function queryAI(history, lang) {
     }
   }
 
-  throw new Error(
-    "All AI providers failed"
-  );
+  // 5. OPENAI
+  if (config.keys.openai) {
+    try {
+      const result =
+        await callOpenAI(messages);
+
+      if (result) {
+        logger.info("AI provider: OpenAI");
+        return result;
+      }
+    } catch (error) {
+      logger.error(
+        `OpenAI AI error: ${
+          error.response?.status || ""
+        } ${
+          error.response?.data?.error?.message ||
+          error.message
+        }`
+      );
+    }
+  }
+
+  throw new Error("All AI providers failed");
 }
 
 /* =========================================================
-   IMAGE GENERATION — OPENAI
+   IMAGE GENERATION
 ========================================================= */
 
-export async function generateImage(
-  promptText
-) {
+export async function generateImage(promptText) {
   try {
     if (!config.keys.openai) {
-      throw new Error(
-        "OpenAI API key missing"
-      );
+      throw new Error("OpenAI API key missing");
     }
 
     const res = await axios.post(
@@ -489,18 +440,14 @@ export async function generateImage(
         model:
           process.env.OPENAI_IMAGE_MODEL ||
           "dall-e-3",
-
         prompt: promptText,
-
         n: 1,
-
         size: "1024x1024",
       },
       {
         headers: {
           Authorization: `Bearer ${config.keys.openai}`,
-          "Content-Type":
-            "application/json",
+          "Content-Type": "application/json",
         },
         timeout: 60000,
       }
@@ -512,7 +459,7 @@ export async function generateImage(
     );
   } catch (error) {
     logger.error(
-      `❌ Image generation error: ${
+      `Image generation error: ${
         error.response?.status || ""
       } ${
         error.response?.data?.error?.message ||
@@ -528,28 +475,21 @@ export async function generateImage(
    CLAUDE DIRECT QUERY
 ========================================================= */
 
-export async function queryClaude(
-  prompt
-) {
+export async function queryClaude(prompt) {
   try {
     if (!config.keys.claude) {
-      throw new Error(
-        "Claude API key missing"
-      );
+      throw new Error("Claude API key missing");
     }
 
-    const result =
-      await callClaude([
-        {
-          role: "user",
-          content: String(prompt),
-        },
-      ]);
-
-    return result;
+    return await callClaude([
+      {
+        role: "user",
+        content: String(prompt),
+      },
+    ]);
   } catch (error) {
     logger.error(
-      `❌ Claude AI error: ${
+      `Claude AI error: ${
         error.response?.status || ""
       } ${
         error.response?.data?.error?.message ||
@@ -565,33 +505,27 @@ export async function queryClaude(
    KINO QIDIRISH
 ========================================================= */
 
-export async function searchMovie(
-  movieName
-) {
+export async function searchMovie(movieName) {
   try {
     const messages = [
       {
         role: "system",
         content:
           "Sen professional kino ekspertisan. " +
-          "Foydalanuvchi yozgan kino yoki serial haqida " +
-          "aniq ma'lumot ber: nomi, chiqqan yili, " +
-          "rejissyori, bosh rollar va qisqacha mazmuni.",
+          "Kino yoki serial haqida aniq ma'lumot ber: " +
+          "nomi, chiqqan yili, rejissyori, bosh rollar " +
+          "va qisqacha mazmuni.",
       },
-
       {
         role: "user",
         content: String(movieName),
       },
     ];
 
-    return await queryAI(
-      messages,
-      "uz"
-    );
+    return await queryAI(messages, "uz");
   } catch (error) {
     logger.error(
-      `❌ Movie search error: ${error.message}`
+      `Movie search error: ${error.message}`
     );
 
     return "❌ Kino qidirishda xatolik yuz berdi.";
@@ -602,9 +536,7 @@ export async function searchMovie(
    INTERNET QIDIRUV
 ========================================================= */
 
-export async function searchInternet(
-  query
-) {
+export async function searchInternet(query) {
   try {
     const messages = [
       {
@@ -614,23 +546,18 @@ export async function searchInternet(
           "Foydalanuvchi so'roviga aniq, ishonchli " +
           "va tushunarli javob ber.",
       },
-
       {
         role: "user",
         content: String(query),
       },
     ];
 
-    return await queryAI(
-      messages,
-      "uz"
-    );
+    return await queryAI(messages, "uz");
   } catch (error) {
     logger.error(
-      `❌ Internet search error: ${error.message}`
+      `Internet search error: ${error.message}`
     );
 
     return "❌ Internetdan qidirishda xatolik yuz berdi.";
   }
 }
-```
