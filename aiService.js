@@ -9,10 +9,6 @@ const LANGUAGE_NAMES = {
   en: "English",
 };
 
-/* =========================================================
-   SYSTEM PROMPT
-========================================================= */
-
 function systemPrompt(lang) {
   const languageName = LANGUAGE_NAMES[lang] || "Uzbek";
 
@@ -20,536 +16,517 @@ function systemPrompt(lang) {
     role: "system",
 
     content:
-      `You are a helpful, friendly Telegram AI assistant. ` +
+      `You are a helpful Telegram bot assistant. ` +
       `Always answer in ${languageName}. ` +
-      `Do not switch languages unless the user explicitly asks. ` +
-      `Understand the user's question carefully before answering. ` +
-      `Give accurate, natural and useful answers. ` +
-      `Keep answers reasonably concise.`,
+      `Keep answers concise, useful and easy to understand.`,
   };
 }
 
-/* =========================================================
-   ERROR HELPER
-========================================================= */
-
-function providerError(provider, error) {
-  const status = error?.response?.status || "NO_STATUS";
-
-  const apiMessage =
-    error?.response?.data?.error?.message ||
-    error?.response?.data?.message ||
-    error?.message ||
-    "Unknown error";
-
-  logger.error(
-    `${provider} AI error: ${status} ${apiMessage}`
-  );
-
-  return new Error(
-    `${provider}: ${status} ${apiMessage}`
+function getResponseText(data) {
+  return (
+    data?.choices?.[0]?.message?.content?.trim() ||
+    ""
   );
 }
 
-/* =========================================================
+function getErrorText(error) {
+  return (
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.message ||
+    "Unknown error"
+  );
+}
+
+/* =====================================================
    GROQ
-========================================================= */
+===================================================== */
 
 async function callGroq(messages) {
   if (!config.keys.groq) {
     throw new Error("GROQ_API_KEY missing");
   }
 
-  try {
-    const res = await axios.post(
-      "https://api.groq.com/openai/v1/chat/completions",
+  const response = await axios.post(
+    "https://api.groq.com/openai/v1/chat/completions",
 
-      {
-        model:
-          config.models.groq ||
-          AI_MODELS.GROQ,
+    {
+      model: AI_MODELS.GROQ,
+      messages,
+      temperature: 0.4,
+      max_tokens: 1200,
+    },
 
-        messages,
-
-        temperature: 0.4,
-
-        max_tokens: 1200,
+    {
+      headers: {
+        Authorization: `Bearer ${config.keys.groq}`,
+        "Content-Type": "application/json",
       },
 
-      {
-        headers: {
-          Authorization:
-            `Bearer ${config.keys.groq}`,
-
-          "Content-Type":
-            "application/json",
-        },
-
-        timeout:
-          config.timeouts.groq,
-      }
-    );
-
-    const answer =
-      res.data?.choices?.[0]?.message?.content?.trim();
-
-    if (!answer) {
-      throw new Error("Groq returned empty response");
+      timeout: 12000,
     }
+  );
 
-    return answer;
-  } catch (error) {
-    throw providerError("Groq", error);
+  const answer = getResponseText(response.data);
+
+  if (!answer) {
+    throw new Error("Groq empty response");
   }
+
+  return answer;
 }
 
-/* =========================================================
-   OPENROUTER
-========================================================= */
+/* =====================================================
+   CEREBRAS
+===================================================== */
 
-async function callOpenRouter(messages) {
-  if (!config.keys.openrouter) {
-    throw new Error("OPENROUTER_API_KEY missing");
+async function callCerebras(messages) {
+  if (!config.keys.cerebras) {
+    throw new Error("CEREBRAS_API_KEY missing");
   }
 
-  try {
-    const res = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
+  const response = await axios.post(
+    "https://api.cerebras.ai/v1/chat/completions",
 
-      {
-        model:
-          config.models.openrouter ||
-          AI_MODELS.OPENROUTER_FALLBACK,
+    {
+      model: AI_MODELS.CEREBRAS,
+      messages,
+      max_tokens: 1200,
+      temperature: 0.4,
+    },
 
-        messages,
-
-        temperature: 0.4,
-
-        max_tokens: 1200,
+    {
+      headers: {
+        Authorization: `Bearer ${config.keys.cerebras}`,
+        "Content-Type": "application/json",
       },
 
-      {
-        headers: {
-          Authorization:
-            `Bearer ${config.keys.openrouter}`,
-
-          "Content-Type":
-            "application/json",
-
-          "HTTP-Referer":
-            "https://telegram-ai-bot.onrender.com",
-
-          "X-Title":
-            "Telegram AI Bot",
-        },
-
-        timeout:
-          config.timeouts.openrouter,
-      }
-    );
-
-    const answer =
-      res.data?.choices?.[0]?.message?.content?.trim();
-
-    if (!answer) {
-      throw new Error(
-        "OpenRouter returned empty response"
-      );
+      timeout: 12000,
     }
+  );
 
-    return answer;
-  } catch (error) {
-    throw providerError("OpenRouter", error);
+  const answer = getResponseText(response.data);
+
+  if (!answer) {
+    throw new Error("Cerebras empty response");
   }
+
+  return answer;
 }
 
-/* =========================================================
+/* =====================================================
    GEMINI 2.5 FLASH
-========================================================= */
+===================================================== */
 
 async function callGemini(messages) {
   if (!config.keys.gemini) {
     throw new Error("GEMINI_API_KEY missing");
   }
 
-  try {
-    const systemMessages = messages
-      .filter((message) => message.role === "system")
-      .map((message) => String(message.content || ""))
-      .join("\n\n");
+  const systemMessages = messages
+    .filter((m) => m.role === "system")
+    .map((m) => String(m.content || ""))
+    .join("\n\n");
 
-    const contents = messages
-      .filter((message) => message.role !== "system")
-      .map((message) => ({
-        role:
-          message.role === "assistant"
-            ? "model"
-            : "user",
+  const contents = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({
+      role:
+        m.role === "assistant"
+          ? "model"
+          : "user",
 
-        parts: [
-          {
-            text: String(message.content || ""),
-          },
-        ],
-      }));
-
-    if (!contents.length) {
-      throw new Error(
-        "Gemini received empty conversation"
-      );
-    }
-
-    const model =
-      config.models.gemini ||
-      AI_MODELS.GEMINI ||
-      "gemini-2.5-flash";
-
-    const url =
-      `https://generativelanguage.googleapis.com/v1beta/models/` +
-      `${model}:generateContent`;
-
-    const body = {
-      contents,
-    };
-
-    if (systemMessages) {
-      body.systemInstruction = {
-        parts: [
-          {
-            text: systemMessages,
-          },
-        ],
-      };
-    }
-
-    const res = await axios.post(
-      url,
-      body,
-
-      {
-        headers: {
-          "Content-Type":
-            "application/json",
-
-          "x-goog-api-key":
-            config.keys.gemini,
+      parts: [
+        {
+          text: String(m.content || ""),
         },
+      ],
+    }));
 
-        timeout:
-          config.timeouts.gemini,
-      }
-    );
+  if (!contents.length) {
+    contents.push({
+      role: "user",
 
-    const answer =
-      res.data?.candidates?.[0]?.content?.parts
-        ?.map((part) => part.text || "")
-        .join("")
-        .trim();
-
-    if (!answer) {
-      const reason =
-        res.data?.promptFeedback?.blockReason ||
-        res.data?.candidates?.[0]?.finishReason ||
-        "empty response";
-
-      throw new Error(
-        `Gemini returned no text: ${reason}`
-      );
-    }
-
-    return answer;
-  } catch (error) {
-    throw providerError("Gemini", error);
+      parts: [
+        {
+          text: "Salom",
+        },
+      ],
+    });
   }
+
+  const body = {
+    contents,
+
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 1200,
+    },
+  };
+
+  if (systemMessages) {
+    body.systemInstruction = {
+      parts: [
+        {
+          text: systemMessages,
+        },
+      ],
+    };
+  }
+
+  const response = await axios.post(
+    `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODELS.GEMINI}:generateContent`,
+
+    body,
+
+    {
+      headers: {
+        "x-goog-api-key": config.keys.gemini,
+        "Content-Type": "application/json",
+      },
+
+      timeout: 12000,
+    }
+  );
+
+  const answer =
+    response.data?.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text || "")
+      .join("")
+      .trim() || "";
+
+  if (!answer) {
+    throw new Error("Gemini empty response");
+  }
+
+  return answer;
 }
 
-/* =========================================================
+/* =====================================================
+   MISTRAL
+===================================================== */
+
+async function callMistral(messages) {
+  if (!config.keys.mistral) {
+    throw new Error("MISTRAL_API_KEY missing");
+  }
+
+  const response = await axios.post(
+    "https://api.mistral.ai/v1/chat/completions",
+
+    {
+      model: AI_MODELS.MISTRAL,
+      messages,
+      max_tokens: 1200,
+      temperature: 0.4,
+    },
+
+    {
+      headers: {
+        Authorization: `Bearer ${config.keys.mistral}`,
+        "Content-Type": "application/json",
+      },
+
+      timeout: 15000,
+    }
+  );
+
+  const answer = getResponseText(response.data);
+
+  if (!answer) {
+    throw new Error("Mistral empty response");
+  }
+
+  return answer;
+}
+
+/* =====================================================
+   COHERE
+===================================================== */
+
+async function callCohere(messages) {
+  if (!config.keys.cohere) {
+    throw new Error("COHERE_API_KEY missing");
+  }
+
+  const response = await axios.post(
+    "https://api.cohere.com/v2/chat",
+
+    {
+      model: AI_MODELS.COHERE,
+      messages,
+      temperature: 0.4,
+      max_tokens: 1200,
+    },
+
+    {
+      headers: {
+        Authorization: `Bearer ${config.keys.cohere}`,
+        "Content-Type": "application/json",
+      },
+
+      timeout: 15000,
+    }
+  );
+
+  const content = response.data?.message?.content;
+
+  let answer = "";
+
+  if (Array.isArray(content)) {
+    answer = content
+      .map((part) => part?.text || "")
+      .join("")
+      .trim();
+  } else if (typeof content === "string") {
+    answer = content.trim();
+  }
+
+  if (!answer) {
+    throw new Error("Cohere empty response");
+  }
+
+  return answer;
+}
+
+/* =====================================================
+   HUGGING FACE
+===================================================== */
+
+async function callHuggingFace(messages) {
+  if (!config.keys.huggingface) {
+    throw new Error("HF_API_KEY missing");
+  }
+
+  const response = await axios.post(
+    "https://router.huggingface.co/v1/chat/completions",
+
+    {
+      model: AI_MODELS.HUGGINGFACE,
+      messages,
+      temperature: 0.4,
+      max_tokens: 1200,
+    },
+
+    {
+      headers: {
+        Authorization: `Bearer ${config.keys.huggingface}`,
+        "Content-Type": "application/json",
+      },
+
+      timeout: 20000,
+    }
+  );
+
+  const answer = getResponseText(response.data);
+
+  if (!answer) {
+    throw new Error("Hugging Face empty response");
+  }
+
+  return answer;
+}
+
+/* =====================================================
+   OPENROUTER
+===================================================== */
+
+async function callOpenRouter(messages) {
+  if (!config.keys.openrouter) {
+    throw new Error("OPENROUTER_API_KEY missing");
+  }
+
+  const response = await axios.post(
+    "https://openrouter.ai/api/v1/chat/completions",
+
+    {
+      model: AI_MODELS.OPENROUTER,
+      messages,
+      max_tokens: 1200,
+      temperature: 0.4,
+    },
+
+    {
+      headers: {
+        Authorization: `Bearer ${config.keys.openrouter}`,
+        "Content-Type": "application/json",
+
+        "HTTP-Referer":
+          process.env.OPENROUTER_SITE_URL ||
+          "https://telegram-ai-bot.local",
+
+        "X-Title":
+          process.env.OPENROUTER_APP_NAME ||
+          "Telegram AI Bot",
+      },
+
+      timeout: 15000,
+    }
+  );
+
+  const answer = getResponseText(response.data);
+
+  if (!answer) {
+    throw new Error("OpenRouter empty response");
+  }
+
+  return answer;
+}
+
+/* =====================================================
    CLAUDE
-========================================================= */
+===================================================== */
 
 async function callClaude(messages) {
   if (!config.keys.claude) {
     throw new Error("CLAUDE_API_KEY missing");
   }
 
-  try {
-    /*
-     * Claude Messages API system promptni alohida qabul qiladi.
-     */
+  const system = messages
+    .filter((m) => m.role === "system")
+    .map((m) => String(m.content || ""))
+    .join("\n\n");
 
-    const systemMessages = messages
-      .filter((message) => message.role === "system")
-      .map((message) => String(message.content || ""))
-      .join("\n\n");
+  const claudeMessages = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({
+      role:
+        m.role === "assistant"
+          ? "assistant"
+          : "user",
 
-    const claudeMessages = messages
-      .filter((message) => message.role !== "system")
-      .map((message) => ({
-        role:
-          message.role === "assistant"
-            ? "assistant"
-            : "user",
+      content: String(m.content || ""),
+    }));
 
-        content: String(
-          message.content || ""
-        ),
-      }));
+  const body = {
+    model: AI_MODELS.CLAUDE,
 
-    const body = {
-      model:
-        config.models.claude ||
-        AI_MODELS.CLAUDE,
+    max_tokens: 1200,
 
-      max_tokens: 1200,
+    messages: claudeMessages,
+  };
 
-      messages: claudeMessages,
-    };
-
-    if (systemMessages) {
-      body.system = systemMessages;
-    }
-
-    const res = await axios.post(
-      "https://api.anthropic.com/v1/messages",
-
-      body,
-
-      {
-        headers: {
-          "x-api-key":
-            config.keys.claude,
-
-          "anthropic-version":
-            "2023-06-01",
-
-          "Content-Type":
-            "application/json",
-        },
-
-        timeout:
-          config.timeouts.claude,
-      }
-    );
-
-    const answer =
-      res.data?.content
-        ?.filter((item) => item.type === "text")
-        ?.map((item) => item.text)
-        ?.join("")
-        ?.trim();
-
-    if (!answer) {
-      throw new Error(
-        "Claude returned empty response"
-      );
-    }
-
-    return answer;
-  } catch (error) {
-    throw providerError("Claude", error);
-  }
-}
-
-/* =========================================================
-   OPENAI
-========================================================= */
-
-async function callOpenAI(messages) {
-  if (!config.keys.openai) {
-    throw new Error("OPENAI_API_KEY missing");
+  if (system) {
+    body.system = system;
   }
 
-  try {
-    /*
-     * OpenAI Responses API.
-     */
+  const response = await axios.post(
+    "https://api.anthropic.com/v1/messages",
 
-    const responseInput = messages.map(
-      (message) => ({
-        role:
-          message.role === "assistant"
-            ? "assistant"
-            : message.role === "system"
-            ? "system"
-            : "user",
+    body,
 
-        content:
-          String(message.content || ""),
-      })
-    );
-
-    const res = await axios.post(
-      "https://api.openai.com/v1/responses",
-
-      {
-        model:
-          config.models.openai ||
-          AI_MODELS.OPENAI,
-
-        input: responseInput,
-
-        max_output_tokens: 1200,
+    {
+      headers: {
+        "x-api-key": config.keys.claude,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
       },
 
-      {
-        headers: {
-          Authorization:
-            `Bearer ${config.keys.openai}`,
-
-          "Content-Type":
-            "application/json",
-        },
-
-        timeout:
-          config.timeouts.openai,
-      }
-    );
-
-    /*
-     * Eng oddiy output_text.
-     */
-    if (
-      typeof res.data?.output_text ===
-      "string"
-    ) {
-      const answer =
-        res.data.output_text.trim();
-
-      if (answer) {
-        return answer;
-      }
-    }
-
-    /*
-     * Fallback parser.
-     */
-    const answer =
-      res.data?.output
-        ?.flatMap((item) =>
-          item.content || []
-        )
-        ?.filter(
-          (item) =>
-            item.type === "output_text"
-        )
-        ?.map(
-          (item) => item.text || ""
-        )
-        ?.join("")
-        ?.trim();
-
-    if (!answer) {
-      throw new Error(
-        "OpenAI returned empty response"
-      );
-    }
-
-    return answer;
-  } catch (error) {
-    throw providerError("OpenAI", error);
-  }
-}
-
-/* =========================================================
-   PROVIDER CALLER
-========================================================= */
-
-async function callProvider(
-  provider,
-  messages
-) {
-  switch (provider) {
-    case "groq":
-      return await callGroq(messages);
-
-    case "openrouter":
-      return await callOpenRouter(messages);
-
-    case "gemini":
-      return await callGemini(messages);
-
-    case "claude":
-      return await callClaude(messages);
-
-    case "openai":
-      return await callOpenAI(messages);
-
-    default:
-      throw new Error(
-        `Unknown AI provider: ${provider}`
-      );
-  }
-}
-
-/* =========================================================
-   AUTO FALLBACK
-========================================================= */
-
-const AUTO_PROVIDERS = [
-  "groq",
-  "openrouter",
-  "gemini",
-  "claude",
-  "openai",
-];
-
-async function queryAuto(messages) {
-  const available = AUTO_PROVIDERS.filter(
-    (provider) => {
-      return Boolean(
-        config.keys[provider]
-      );
+      timeout: 15000,
     }
   );
 
-  if (!available.length) {
-    throw new Error(
-      "No AI provider API keys configured"
-    );
+  const answer =
+    response.data?.content
+      ?.filter((part) => part.type === "text")
+      ?.map((part) => part.text || "")
+      ?.join("")
+      ?.trim() || "";
+
+  if (!answer) {
+    throw new Error("Claude empty response");
   }
 
-  const errors = [];
+  return answer;
+}
 
-  for (const provider of available) {
-    try {
-      const result =
-        await callProvider(
-          provider,
-          messages
-        );
+/* =====================================================
+   PROVIDERS
+===================================================== */
 
-      if (result) {
-        logger.info(
-          `AI provider: ${provider}`
-        );
+const PROVIDERS = {
+  groq: {
+    name: "Groq",
+    key: "groq",
+    call: callGroq,
+  },
 
-        return result;
-      }
-    } catch (error) {
-      errors.push(
-        `${provider}: ${error.message}`
-      );
+  cerebras: {
+    name: "Cerebras",
+    key: "cerebras",
+    call: callCerebras,
+  },
 
-      /*
-       * Auto rejimida xato bo'lsa keyingisiga
-       * o'tadi.
-       */
-      logger.error(
-        `Auto fallback: ${provider} failed`
-      );
-    }
+  gemini: {
+    name: "Gemini 2.5 Flash",
+    key: "gemini",
+    call: callGemini,
+  },
+
+  mistral: {
+    name: "Mistral",
+    key: "mistral",
+    call: callMistral,
+  },
+
+  cohere: {
+    name: "Cohere",
+    key: "cohere",
+    call: callCohere,
+  },
+
+  huggingface: {
+    name: "Hugging Face",
+    key: "huggingface",
+    call: callHuggingFace,
+  },
+
+  openrouter: {
+    name: "OpenRouter Free",
+    key: "openrouter",
+    call: callOpenRouter,
+  },
+
+  claude: {
+    name: "Claude",
+    key: "claude",
+    call: callClaude,
+  },
+};
+
+/* =====================================================
+   AVAILABLE PROVIDERS
+===================================================== */
+
+export function getAvailableProviders() {
+  return Object.entries(PROVIDERS)
+    .filter(([, provider]) =>
+      Boolean(config.keys[provider.key])
+    )
+    .map(([id, provider]) => ({
+      id,
+      name: provider.name,
+    }));
+}
+
+/* =====================================================
+   PROVIDER NAME
+===================================================== */
+
+export function getProviderName(id) {
+  if (id === "auto") {
+    return "🔄 Avtomatik fallback";
   }
 
-  throw new Error(
-    `All AI providers failed: ${errors.join(
-      " | "
-    )}`
+  return (
+    PROVIDERS[id]?.name ||
+    "🔄 Avtomatik fallback"
   );
 }
 
-/* =========================================================
-   MAIN AI FUNCTION
-========================================================= */
+/* =====================================================
+   MAIN QUERY
+===================================================== */
 
 export async function queryAI(
   history,
@@ -561,85 +538,115 @@ export async function queryAI(
     ...history,
   ];
 
-  /*
-   * Noto'g'ri provider yuborilsa Auto ishlaydi.
-   */
-  const allowed = [
-    "auto",
-    "groq",
-    "openrouter",
-    "gemini",
-    "claude",
-    "openai",
-  ];
+  /* -----------------------------------------
+     USER SELECTED AI
+  ----------------------------------------- */
 
-  if (!allowed.includes(provider)) {
-    provider = "auto";
-  }
+  if (provider !== "auto") {
+    const selected = PROVIDERS[provider];
 
-  /*
-   * AUTO
-   */
-  if (provider === "auto") {
-    return await queryAuto(messages);
-  }
-
-  /*
-   * MANUAL PROVIDER
-   *
-   * Masalan Gemini tanlangan bo'lsa,
-   * faqat Gemini ishlaydi.
-   */
-  try {
-    const result =
-      await callProvider(
-        provider,
-        messages
-      );
-
-    if (!result) {
+    if (!selected) {
       throw new Error(
-        `${provider} returned empty response`
+        `Unknown AI provider: ${provider}`
       );
     }
 
-    logger.info(
-      `AI provider: ${provider}`
-    );
+    if (!config.keys[selected.key]) {
+      throw new Error(
+        `${selected.name} API key mavjud emas`
+      );
+    }
 
-    return result;
-  } catch (error) {
-    /*
-     * Manual rejimda boshqa AI'ga
-     * yashirincha o'tmaymiz.
-     */
-    logger.error(
-      `Selected AI (${provider}) failed: ${error.message}`
-    );
+    try {
+      const result =
+        await selected.call(messages);
 
-    throw error;
+      if (!result) {
+        throw new Error(
+          `${selected.name} empty response`
+        );
+      }
+
+      logger.info(
+        `AI provider: ${selected.name}`
+      );
+
+      return result;
+    } catch (error) {
+      logger.error(
+        `${selected.name} error: ${getErrorText(error)}`
+      );
+
+      throw new Error(
+        `${selected.name}: ${getErrorText(error)}`
+      );
+    }
   }
+
+  /* -----------------------------------------
+     AUTOMATIC FALLBACK
+  ----------------------------------------- */
+
+  const available =
+    Object.entries(PROVIDERS).filter(
+      ([, providerData]) =>
+        Boolean(config.keys[providerData.key])
+    );
+
+  if (!available.length) {
+    throw new Error(
+      "Hech qanday AI API key topilmadi"
+    );
+  }
+
+  for (const [
+    ,
+    providerData,
+  ] of available) {
+    try {
+      const result =
+        await providerData.call(messages);
+
+      if (result) {
+        logger.info(
+          `AI provider: ${providerData.name}`
+        );
+
+        return result;
+      }
+    } catch (error) {
+      logger.error(
+        `${providerData.name} error: ${getErrorText(error)}`
+      );
+    }
+  }
+
+  throw new Error(
+    "Barcha AI providerlar ishlamadi"
+  );
 }
 
-/* =========================================================
-   IMAGE GENERATION
-========================================================= */
+/* =====================================================
+   OPENAI IMAGE GENERATION
+===================================================== */
 
 export async function generateImage(
   promptText
 ) {
-  try {
-    if (!config.keys.openai) {
-      throw new Error(
-        "OpenAI API key missing"
-      );
-    }
+  if (!config.keys.openai) {
+    throw new Error(
+      "OPENAI_API_KEY mavjud emas"
+    );
+  }
 
-    const res = await axios.post(
+  try {
+    const response = await axios.post(
       "https://api.openai.com/v1/images/generations",
 
       {
-        model: "gpt-image-2",
+        model:
+          process.env.OPENAI_IMAGE_MODEL ||
+          "dall-e-3",
 
         prompt: promptText,
 
@@ -650,11 +657,8 @@ export async function generateImage(
 
       {
         headers: {
-          Authorization:
-            `Bearer ${config.keys.openai}`,
-
-          "Content-Type":
-            "application/json",
+          Authorization: `Bearer ${config.keys.openai}`,
+          "Content-Type": "application/json",
         },
 
         timeout: 45000,
@@ -662,123 +666,96 @@ export async function generateImage(
     );
 
     return (
-      res.data?.data?.[0]?.url ||
+      response.data?.data?.[0]?.url ||
       null
     );
   } catch (error) {
     logger.error(
-      `Image generation error: ${error.message}`
+      `Image generation error: ${getErrorText(error)}`
     );
 
-    return null;
+    throw new Error(
+      `Rasm yaratish ishlamadi: ${getErrorText(error)}`
+    );
   }
 }
 
-/* =========================================================
+/* =====================================================
    CLAUDE DIRECT
-========================================================= */
+===================================================== */
 
-export async function queryClaude(
-  prompt
-) {
-  try {
-    if (!config.keys.claude) {
-      throw new Error(
-        "Claude API key missing"
-      );
-    }
-
-    return await callClaude([
+export async function queryClaude(prompt) {
+  return queryAI(
+    [
       {
         role: "user",
-        content: prompt,
+        content: String(prompt),
       },
-    ]);
-  } catch (error) {
-    logger.error(
-      `Claude direct error: ${error.message}`
-    );
+    ],
 
-    return "❌ Claude bilan bog'lanishda xatolik yuz berdi.";
-  }
+    "uz",
+
+    "claude"
+  );
 }
 
-/* =========================================================
-   KINO QIDIRISH
-========================================================= */
+/* =====================================================
+   MOVIE SEARCH AI
+===================================================== */
 
 export async function searchMovie(
   movieName
 ) {
-  try {
-    const messages = [
+  return queryAI(
+    [
       {
         role: "system",
 
         content:
           "Sen professional kino ekspertisan. " +
-          "Foydalanuvchi yozgan kino yoki serial " +
-          "haqida aniq va qisqa ma'lumot ber. " +
-          "Nomini, yilini, janrini, rejissyorini, " +
-          "asosiy aktyorlarini va qisqacha mazmunini ayt.",
+          "Kino yoki serial haqida nomi, yili, " +
+          "rejissyori, aktyorlari va qisqa mazmunini ayt. " +
+          "Noma'lum ma'lumotni o'ylab topma.",
       },
 
       {
         role: "user",
-
-        content: movieName,
+        content: String(movieName),
       },
-    ];
+    ],
 
-    return await queryAI(
-      messages,
-      "uz",
-      "auto"
-    );
-  } catch (error) {
-    logger.error(
-      `Movie AI error: ${error.message}`
-    );
+    "uz",
 
-    return "";
-  }
+    "auto"
+  );
 }
 
-/* =========================================================
-   INTERNET QIDIRUV
-========================================================= */
+/* =====================================================
+   INTERNET SEARCH AI
+===================================================== */
 
 export async function searchInternet(
   query
 ) {
-  try {
-    const messages = [
+  return queryAI(
+    [
       {
         role: "system",
 
         content:
-          "Sen internet qidiruv assistentisan. " +
-          "Foydalanuvchi so'rovini tushunib, " +
-          "aniq va foydali javob ber.",
+          "Sen internet qidiruv yordamchisisan. " +
+          "Aniq, qisqa va tushunarli javob ber. " +
+          "Real vaqt ma'lumoti bo'lsa, uni alohida tekshirish kerak.",
       },
 
       {
         role: "user",
-
-        content: query,
+        content: String(query),
       },
-    ];
+    ],
 
-    return await queryAI(
-      messages,
-      "uz",
-      "auto"
-    );
-  } catch (error) {
-    logger.error(
-      `Internet AI error: ${error.message}`
-    );
+    "uz",
 
-    return "";
-  }
+    "auto"
+  );
 }
