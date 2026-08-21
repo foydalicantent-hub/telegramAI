@@ -28,15 +28,31 @@ const userSchema = new mongoose.Schema(
       default: "uz",
     },
 
-    // ai / movie / search / circle / ai_select
+    /*
+     * ai
+     * movie
+     * search
+     * circle
+     * ai_select
+     */
     mode: {
       type: String,
       default: "ai",
     },
 
-    // auto / groq / openrouter / gemini / claude / openai
+    /*
+     * Foydalanuvchi tanlagan AI.
+     *
+     * auto       = fallback
+     * groq       = faqat Groq
+     * openrouter = faqat OpenRouter
+     * gemini     = faqat Gemini
+     * claude     = faqat Claude
+     * openai     = faqat OpenAI
+     */
     aiProvider: {
       type: String,
+
       enum: [
         "auto",
         "groq",
@@ -45,6 +61,7 @@ const userSchema = new mongoose.Schema(
         "claude",
         "openai",
       ],
+
       default: "auto",
     },
 
@@ -128,6 +145,7 @@ export async function refreshPremiumStatus(user) {
   ) {
     user.isPremium = false;
     user.premiumExpiresAt = null;
+
     await user.save();
   }
 }
