@@ -22,61 +22,33 @@ export const config = {
   keys: {
     groq: process.env.GROQ_API_KEY || null,
 
-    openrouter:
-      process.env.OPENROUTER_API_KEY || null,
+    cerebras: process.env.CEREBRAS_API_KEY || null,
 
-    gemini:
-      process.env.GEMINI_API_KEY || null,
+    gemini: process.env.GEMINI_API_KEY || null,
 
-    claude:
-      process.env.CLAUDE_API_KEY || null,
+    mistral: process.env.MISTRAL_API_KEY || null,
 
-    openai:
-      process.env.OPENAI_API_KEY || null,
+    cohere: process.env.COHERE_API_KEY || null,
 
-    youtube:
-      process.env.YOUTUBE_API_KEY || null,
+    huggingface:
+      process.env.HF_API_KEY ||
+      process.env.HF_TOKEN ||
+      null,
 
-    tmdb:
-      process.env.TMDB_API_KEY || null,
-
-    omdb:
-      process.env.OMDB_API_KEY || null,
-  },
-
-  /*
-   * Timeoutlarni juda katta qilmaymiz.
-   * Shuning uchun Auto rejimida ishlamaydigan provider
-   * botni uzoq ushlab turmaydi.
-   */
-  timeouts: {
-    groq: Number(process.env.GROQ_TIMEOUT || 12000),
-    openrouter: Number(process.env.OPENROUTER_TIMEOUT || 12000),
-    gemini: Number(process.env.GEMINI_TIMEOUT || 15000),
-    claude: Number(process.env.CLAUDE_TIMEOUT || 15000),
-    openai: Number(process.env.OPENAI_TIMEOUT || 15000),
-  },
-
-  models: {
-    groq:
-      process.env.GROQ_MODEL ||
-      "openai/gpt-oss-120b",
-
-    openrouter:
-      process.env.OPENROUTER_MODEL ||
-      "openrouter/free",
-
-    gemini:
-      process.env.GEMINI_MODEL ||
-      "gemini-2.5-flash",
+    openrouter: process.env.OPENROUTER_API_KEY || null,
 
     claude:
-      process.env.CLAUDE_MODEL ||
-      "claude-sonnet-4-5",
+      process.env.CLAUDE_API_KEY ||
+      process.env["CLAUDE_API-KEY"] ||
+      null,
 
-    openai:
-      process.env.OPENAI_MODEL ||
-      "gpt-5.6-luna",
+    openai: process.env.OPENAI_API_KEY || null,
+
+    youtube: process.env.YOUTUBE_API_KEY || null,
+
+    tmdb: process.env.TMDB_API_KEY || null,
+
+    omdb: process.env.OMDB_API_KEY || null,
   },
 };
 
@@ -93,15 +65,17 @@ export function assertRequiredConfig() {
 
   const hasAI =
     config.keys.groq ||
-    config.keys.openrouter ||
+    config.keys.cerebras ||
     config.keys.gemini ||
+    config.keys.mistral ||
+    config.keys.cohere ||
+    config.keys.huggingface ||
+    config.keys.openrouter ||
     config.keys.claude ||
     config.keys.openai;
 
   if (!hasAI) {
-    missing.push(
-      "GROQ_API_KEY yoki OPENROUTER_API_KEY yoki GEMINI_API_KEY yoki CLAUDE_API_KEY yoki OPENAI_API_KEY"
-    );
+    missing.push("Kamida bitta AI API key");
   }
 
   if (missing.length) {
