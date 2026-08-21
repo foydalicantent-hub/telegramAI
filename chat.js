@@ -1,56 +1,239 @@
 import { Memory } from "./Memory.js";
 import { getOrCreateUser } from "./userService.js";
+import { ensureLanguage } from "./User.js";
+
 import {
-  ensureLanguage,
-  ensureAIProvider,
-} from "./User.js";
-import { queryAI } from "./aiService.js";
+  queryAI,
+  generateImage,
+  getAvailableProviders,
+  getProviderName,
+} from "./aiService.js";
+
 import { searchMovie } from "./movieService.js";
 import { webSearch } from "./searchService.js";
+
 import {
   downloadMedia,
   isSocialMediaUrl,
 } from "./downloaderService.js";
-import {
-  MEMORY_HISTORY_LIMIT,
-} from "./constants.js";
+
+import { MEMORY_HISTORY_LIMIT } from "./constants.js";
+
 import { logger } from "./logger.js";
+
 import {
   mainMenuKeyboard,
-  aiSelectionKeyboard,
+  aiProviderKeyboard,
 } from "./mainMenu.js";
+
+import { config } from "./env.js";
+
 import fetch from "node-fetch";
 
-/* =========================================================
-   AI TANLASH
-========================================================= */
+/* =====================================================
+   AI SELECTOR
+===================================================== */
 
-const AI_BUTTONS = {
-  "🔄 Auto": "auto",
-  "⚡ Groq": "groq",
-  "🌐 OpenRouter": "openrouter",
-  "✨ Gemini 2.5 Flash": "gemini",
-  "🧠 Claude": "claude",
-  "🤖 OpenAI": "openai",
-};
+export async function showAISelector(
+  ctx,
+  user
+) {
+  const providers =
+    getAvailableProviders();
 
-const AI_NAMES = {
-  auto: "🔄 Auto",
-  groq: "⚡ Groq",
-  openrouter: "🌐 OpenRouter",
-  gemini: "✨ Gemini 2.5 Flash",
-  claude: "🧠 Claude",
-  openai: "🤖 OpenAI",
-};
+  const current =
+    user.aiProvider || "auto";
 
-/* =========================================================
-   MAIN HANDLER
-========================================================= */
+  const text =
+    `🤖 <b>AI Chat</b>\n\n` +
+    `Hozir tanlangan: <b>${getProviderName(
+      current
+    )}</b>\n\n` +
+    `AI tanlang:`;
+
+  await ctx.reply(text, {
+    parse_mode: "HTML",
+
+    reply_markup:
+      aiProviderKeyboard(
+        providers,
+        current,
+        Boolean(config.keys.openai)
+      ),
+  });
+}
+
+/* =====================================================
+   AI CALLBACK
+===================================================== */
+
+export async function aiCallbackHandler(
+  ctx
+) {
+  const data =
+    ctx.callbackQuery?.data;
+
+  if (!data?.startsWith("ai_")) {
+    return;
+  }
+
+  try {
+    const user =
+      await getOrCreateUser(ctx);
+
+    /* CLOSE */
+
+    if (data === "ai_close") {
+      await ctx.answerCallbackQuery(
+        "Yopildi"
+      );
+
+      await ctx.deleteMessage()
+        .catch(() => {});
+
+      return;
+    }
+
+    /* IMAGE */
+
+    if (data === "ai_image") {
+      if (!config.keys.openai) {
+        await ctx.answerCallbackQuery(
+          "OpenAI API key topilmadi",
+          {
+            show_alert: true,
+          }
+        );
+
+        return;
+      }
+
+      user.mode = "image";
+
+      await user.save();
+
+      await ctx.answerCallbackQuery();
+
+      await ctx.deleteMessage()
+        .catch(() => {});
+
+      await ctx.reply(
+        "🎨 <b>Rasm yaratish</b>\n\n" +
+          "Rasm qanday bo'lishini yozing:",
+
+        {
+          parse_mode: "HTML",
+
+          reply_markup:
+            mainMenuKeyboard,
+        }
+      );
+
+      return;
+    }
+
+    /* SELECT */
+
+    if (data.startsWith("ai_select:")) {
+      const provider =
+        data.split(":")[1];
+
+      const validProviders = [
+        "auto",
+        "groq",
+        "cerebras",
+        "gemini",
+        "mistral",
+        "cohere",
+        "huggingface",
+        "openrouter",
+        "claude",
+      ];
+
+      if (
+        !validProviders.includes(
+          provider
+        )
+      ) {
+        await ctx.answerCallbackQuery(
+          "Noto'g'ri AI",
+          {
+            show_alert: true,
+          }
+        );
+
+        return;
+      }
+
+      if (provider !== "auto") {
+        const exists =
+          getAvailableProviders().some(
+            (item) =>
+              item.id === provider
+          );
+
+        if (!exists) {
+          await ctx.answerCallbackQuery(
+            "Bu AI uchun API key Render'da yo'q.",
+            {
+              show_alert: true,
+            }
+          );
+
+          return;
+        }
+      }
+
+      user.aiProvider = provider;
+
+      user.mode = "ai";
+
+      await user.save();
+
+      await ctx.answerCallbackQuery(
+        `${getProviderName(
+          provider
+        )} tanlandi`
+      );
+
+      await ctx.deleteMessage()
+        .catch(() => {});
+
+      await ctx.reply(
+        `✅ <b>${getProviderName(
+          provider
+        )}</b> tanlandi.\n\n` +
+          `Endi savolingizni yozing.`,
+
+        {
+          parse_mode: "HTML",
+
+          reply_markup:
+            mainMenuKeyboard,
+        }
+      );
+
+      return;
+    }
+  } catch (error) {
+    logger.error(
+      `AI callback error: ${error.message}`
+    );
+
+    await ctx.answerCallbackQuery(
+      "Xatolik yuz berdi"
+    ).catch(() => {});
+  }
+}
+
+/* =====================================================
+   CHAT HANDLER
+===================================================== */
 
 export async function chatHandler(ctx) {
   try {
     const text =
-      ctx.message?.text?.trim();
+      ctx.message?.text;
 
     if (!text) {
       return;
@@ -62,23 +245,32 @@ export async function chatHandler(ctx) {
     const lang =
       ensureLanguage(user);
 
-    const currentProvider =
-      ensureAIProvider(user);
-
-    /* =====================================================
-       COMMANDS
-    ===================================================== */
+    /* COMMAND */
 
     if (text.startsWith("/")) {
       user.mode = "ai";
+
       await user.save();
 
       return;
     }
 
-    /* =====================================================
-       AVTO-JAVOB
-    ===================================================== */
+    /* AI CHAT */
+
+    if (text === "🤖 AI Chat") {
+      user.mode = "ai";
+
+      await user.save();
+
+      await showAISelector(
+        ctx,
+        user
+      );
+
+      return;
+    }
+
+    /* AUTO REPLY */
 
     if (user.waitingForInstruction) {
       user.businessInstruction =
@@ -90,12 +282,12 @@ export async function chatHandler(ctx) {
       await user.save();
 
       await ctx.reply(
-        `✅ **Avto-javob xabaringiz muvaffaqiyatli saqlandi!**\n\n` +
-          `Endi sizga yozgan har qanday insonga bot mana shu xabarni yuboradi:\n\n` +
-          `👉 _"${text}"_`,
+        `✅ <b>Avto-javob saqlandi!</b>\n\n` +
+          `👉 "${text}"`,
 
         {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
+
           reply_markup:
             mainMenuKeyboard,
         }
@@ -104,105 +296,22 @@ export async function chatHandler(ctx) {
       return;
     }
 
-    /* =====================================================
-       AI CHAT
-    ===================================================== */
-
-    if (text === "🤖 AI Chat") {
-      user.mode = "ai_select";
-
-      await user.save();
-
-      await ctx.reply(
-        `🤖 **AI Chat**\n\n` +
-          `Qaysi AI bilan suhbatlashmoqchisiz?\n\n` +
-          `🔄 **Auto** — bittasi ishlamasa keyingisiga o'tadi.\n` +
-          `⚡ **Groq** — faqat Groq\n` +
-          `🌐 **OpenRouter** — faqat OpenRouter\n` +
-          `✨ **Gemini 2.5 Flash** — faqat Gemini\n` +
-          `🧠 **Claude** — faqat Claude\n` +
-          `🤖 **OpenAI** — faqat OpenAI`,
-
-        {
-          parse_mode: "Markdown",
-          reply_markup:
-            aiSelectionKeyboard,
-        }
-      );
-
-      return;
-    }
-
-    /* =====================================================
-       AI TANLASH
-    ===================================================== */
+    /* MOVIE */
 
     if (
-      user.mode === "ai_select" &&
-      AI_BUTTONS[text]
+      text === "🎬 Kino Qidirish"
     ) {
-      const provider =
-        AI_BUTTONS[text];
-
-      user.aiProvider =
-        provider;
-
-      user.mode = "ai";
-
-      await user.save();
-
-      await ctx.reply(
-        `${AI_NAMES[provider]} **tanlandi.**\n\n` +
-          `Endi savolingizni yozing.`,
-
-        {
-          parse_mode: "Markdown",
-          reply_markup:
-            mainMenuKeyboard,
-        }
-      );
-
-      return;
-    }
-
-    /* =====================================================
-       ORQAGA
-    ===================================================== */
-
-    if (
-      user.mode === "ai_select" &&
-      text === "⬅️ Orqaga"
-    ) {
-      user.mode = "ai";
-
-      await user.save();
-
-      await ctx.reply(
-        "🏠 Asosiy menyu.",
-
-        {
-          reply_markup:
-            mainMenuKeyboard,
-        }
-      );
-
-      return;
-    }
-
-    /* =====================================================
-       KINO
-    ===================================================== */
-
-    if (text === "🎬 Kino Qidirish") {
       user.mode = "movie";
 
       await user.save();
 
       await ctx.reply(
-        "🎬 **Kino qidiruv rejimi yoqildi.**\n\nKino nomini yozing:",
+        "🎬 <b>Kino qidiruv rejimi yoqildi.</b>\n" +
+          "Kino nomini yozing:",
 
         {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
+
           reply_markup:
             mainMenuKeyboard,
         }
@@ -211,9 +320,7 @@ export async function chatHandler(ctx) {
       return;
     }
 
-    /* =====================================================
-       INTERNET QIDIRUV
-    ===================================================== */
+    /* INTERNET */
 
     if (
       text === "🔍 Internet Qidiruv"
@@ -223,10 +330,12 @@ export async function chatHandler(ctx) {
       await user.save();
 
       await ctx.reply(
-        "🔍 **Internet qidiruv rejimi yoqildi.**\n\nSo'rovingizni kiriting:",
+        "🔍 <b>Internet qidiruv rejimi yoqildi.</b>\n" +
+          "So'rovingizni kiriting:",
 
         {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
+
           reply_markup:
             mainMenuKeyboard,
         }
@@ -235,9 +344,7 @@ export async function chatHandler(ctx) {
       return;
     }
 
-    /* =====================================================
-       DUMALOQ VIDEO
-    ===================================================== */
+    /* CIRCLE VIDEO */
 
     if (
       text === "🔴 Dumaloq Video"
@@ -247,11 +354,12 @@ export async function chatHandler(ctx) {
       await user.save();
 
       await ctx.reply(
-        "🔴 **Dumaloq video rejimi yoqildi.**\n\n" +
-          "Video yuboring yoki video havolasini yuboring.",
+        "🔴 <b>Dumaloq video rejimi yoqildi.</b>\n" +
+          "Video yoki link yuboring:",
 
         {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
+
           reply_markup:
             mainMenuKeyboard,
         }
@@ -260,9 +368,7 @@ export async function chatHandler(ctx) {
       return;
     }
 
-    /* =====================================================
-       MULOQOT TARIXI
-    ===================================================== */
+    /* HISTORY */
 
     if (
       text === "📜 Muloqot Tarixi"
@@ -280,7 +386,6 @@ export async function chatHandler(ctx) {
       if (!history.length) {
         await ctx.reply(
           "📜 Muloqot tarixi bo'sh.",
-
           {
             reply_markup:
               mainMenuKeyboard,
@@ -304,10 +409,11 @@ export async function chatHandler(ctx) {
           .join("\n\n");
 
       await ctx.reply(
-        `📜 **Oxirgi suhbatlar:**\n\n${textHist}`,
+        `📜 <b>Oxirgi suhbatlar:</b>\n\n${textHist}`,
 
         {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
+
           reply_markup:
             mainMenuKeyboard,
         }
@@ -316,30 +422,30 @@ export async function chatHandler(ctx) {
       return;
     }
 
-    /* =====================================================
-       SOZLAMALAR
-    ===================================================== */
+    /* SETTINGS */
 
-    if (text === "⚙️ Sozlamalar") {
+    if (
+      text === "⚙️ Sozlamalar"
+    ) {
       await ctx.reply(
-        `⚙️ **Sozlamalar**\n\n` +
-          `🌐 Til: ${user.language || "uz"}\n` +
-          `🤖 AI: ${
-            AI_NAMES[currentProvider] ||
-            AI_NAMES.auto
+        `⚙️ <b>Sozlamalar</b>\n\n` +
+          `🌐 Til: ${
+            user.language || "uz"
           }\n` +
-          `🆔 Telegram ID: \`${user.telegramId}\`\n` +
-          `📞 Telefon: \`${
+          `🤖 AI: ${getProviderName(
+            user.aiProvider || "auto"
+          )}\n` +
+          `🆔 Telegram ID: ` +
+          `<code>${user.telegramId}</code>\n` +
+          `📞 Telefon: ` +
+          `<code>${
             user.phoneNumber ||
             "Ulanmagan"
-          }\`\n\n` +
-          `📌 **Avto-javob:**\n${
-            user.businessInstruction ||
-            "Hali o'rnatilmagan"
-          }`,
+          }</code>`,
 
         {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
+
           reply_markup:
             mainMenuKeyboard,
         }
@@ -348,11 +454,11 @@ export async function chatHandler(ctx) {
       return;
     }
 
-    /* =====================================================
-       SOCIAL VIDEO
-    ===================================================== */
+    /* SOCIAL MEDIA */
 
-    if (isSocialMediaUrl(text)) {
+    if (
+      isSocialMediaUrl(text)
+    ) {
       const waitMsg =
         await ctx.reply(
           "📥 Video serverdan yuklanmoqda...",
@@ -364,7 +470,7 @@ export async function chatHandler(ctx) {
 
       const videoDirectUrl =
         await downloadMedia(
-          text
+          text.trim()
         );
 
       await ctx.api
@@ -374,30 +480,11 @@ export async function chatHandler(ctx) {
         )
         .catch(() => {});
 
-      if (!videoDirectUrl) {
-        await ctx.reply(
-          "❌ Videoni yuklab bo'lmadi.",
-
-          {
-            reply_markup:
-              mainMenuKeyboard,
-          }
-        );
-
-        return;
-      }
-
-      try {
+      if (videoDirectUrl) {
         const videoRes =
           await fetch(
             videoDirectUrl
           );
-
-        if (!videoRes.ok) {
-          throw new Error(
-            `Video HTTP ${videoRes.status}`
-          );
-        }
 
         const arrayBuffer =
           await videoRes.arrayBuffer();
@@ -408,13 +495,11 @@ export async function chatHandler(ctx) {
           );
 
         if (
-          user.mode ===
-          "circle"
+          user.mode === "circle"
         ) {
           try {
             await ctx.replyWithVideoNote(
               videoBuffer,
-
               {
                 reply_markup:
                   mainMenuKeyboard,
@@ -423,7 +508,6 @@ export async function chatHandler(ctx) {
           } catch {
             await ctx.replyWithVideo(
               videoBuffer,
-
               {
                 caption:
                   "📹 Video yuklandi.",
@@ -442,22 +526,17 @@ export async function chatHandler(ctx) {
 
         await ctx.replyWithVideo(
           videoBuffer,
-
           {
             caption:
               "📹 Video muvaffaqiyatli yuklandi!",
+
             reply_markup:
               mainMenuKeyboard,
           }
         );
-      } catch (error) {
-        logger.error(
-          `Video processing error: ${error.message}`
-        );
-
+      } else {
         await ctx.reply(
-          "❌ Videoni qayta ishlashda xatolik.",
-
+          "❌ Videoni yuklab bo'lmadi.",
           {
             reply_markup:
               mainMenuKeyboard,
@@ -468,11 +547,11 @@ export async function chatHandler(ctx) {
       return;
     }
 
-    /* =====================================================
-       MOVIE MODE
-    ===================================================== */
+    /* MOVIE */
 
-    if (user.mode === "movie") {
+    if (
+      user.mode === "movie"
+    ) {
       const waitMsg =
         await ctx.reply(
           "🎬 Film qidirilmoqda..."
@@ -480,7 +559,7 @@ export async function chatHandler(ctx) {
 
       const results =
         await searchMovie(
-          text
+          text.trim()
         );
 
       await ctx.api
@@ -490,31 +569,6 @@ export async function chatHandler(ctx) {
         )
         .catch(() => {});
 
-      /*
-       * movieService.js haqiqiy qidiruv natijasi
-       * qaytarsa, shu yerda ishlaydi.
-       *
-       * AI matn qaytarsa, uni ham ko'rsatamiz.
-       */
-      if (
-        typeof results ===
-          "string" &&
-        results.trim()
-      ) {
-        await ctx.reply(
-          `🎬 **Kino ma'lumoti:**\n\n${results}`,
-
-          {
-            parse_mode:
-              "Markdown",
-            reply_markup:
-              mainMenuKeyboard,
-          }
-        );
-
-        return;
-      }
-
       if (
         Array.isArray(results) &&
         results.length
@@ -522,81 +576,42 @@ export async function chatHandler(ctx) {
         const lines =
           results.map(
             (movie) =>
-              `🎬 **${
+              `🎬 <b>${
                 movie.title
-              }** ${
-                movie.year
-                  ? `(${movie.year})`
-                  : ""
-              }\n🔗 ${
+              }</b> (${
+                movie.year || "?"
+              })\n🔗 ${
                 movie.url || ""
               }`
           );
 
         await ctx.reply(
-          lines.join(
-            "\n\n"
-          ),
-
+          lines.join("\n\n"),
           {
-            parse_mode:
-              "Markdown",
+            parse_mode: "HTML",
+
             reply_markup:
               mainMenuKeyboard,
           }
         );
-
-        return;
-      }
-
-      const fallbackResults =
-        await webSearch(
-          `${text} kino film`
-        );
-
-      if (
-        Array.isArray(
-          fallbackResults
-        ) &&
-        fallbackResults.length
-      ) {
-        const lines =
-          fallbackResults.map(
-            (r) =>
-              `▶️ **${r.title}**\n🔗 ${r.url}`
-          );
-
+      } else {
         await ctx.reply(
-          `🌐 **Topilgan natijalar:**\n\n${lines.join(
-            "\n\n"
-          )}`,
+          typeof results ===
+            "string"
+            ? results
+            : "❌ Kino topilmadi.",
 
           {
-            parse_mode:
-              "Markdown",
             reply_markup:
               mainMenuKeyboard,
           }
         );
-
-        return;
       }
-
-      await ctx.reply(
-        "❌ Afsuski, natija topilmadi.",
-
-        {
-          reply_markup:
-            mainMenuKeyboard,
-        }
-      );
 
       return;
     }
 
-    /* =====================================================
-       SEARCH MODE
-    ===================================================== */
+    /* INTERNET */
 
     if (
       user.mode === "search"
@@ -608,7 +623,7 @@ export async function chatHandler(ctx) {
 
       const results =
         await webSearch(
-          text
+          text.trim()
         );
 
       await ctx.api
@@ -628,7 +643,6 @@ export async function chatHandler(ctx) {
       ) {
         await ctx.reply(
           "❌ Natija topilmadi.",
-
           {
             reply_markup:
               mainMenuKeyboard,
@@ -640,18 +654,17 @@ export async function chatHandler(ctx) {
 
       const lines =
         results.map(
-          (r) =>
-            `▶️ **${r.title}**\n🔗 ${r.url}`
+          (result) =>
+            `▶️ <b>${result.title}</b>\n🔗 ${result.url}`
         );
 
       await ctx.reply(
-        `🌐 **Qidiruv natijalari:**\n\n${lines.join(
-          "\n\n"
-        )}`,
+        `🌐 <b>Qidiruv natijalari:</b>\n\n` +
+          lines.join("\n\n"),
 
         {
-          parse_mode:
-            "Markdown",
+          parse_mode: "HTML",
+
           reply_markup:
             mainMenuKeyboard,
         }
@@ -660,17 +673,78 @@ export async function chatHandler(ctx) {
       return;
     }
 
-    /* =====================================================
-       AI CHAT
-    ===================================================== */
+    /* IMAGE */
+
+    if (
+      user.mode === "image"
+    ) {
+      const wait =
+        await ctx.reply(
+          "🎨 Rasm yaratilmoqda..."
+        );
+
+      try {
+        const imageUrl =
+          await generateImage(
+            text.trim()
+          );
+
+        await ctx.api
+          .deleteMessage(
+            ctx.chat.id,
+            wait.message_id
+          )
+          .catch(() => {});
+
+        if (!imageUrl) {
+          throw new Error(
+            "Rasm URL qaytmadi"
+          );
+        }
+
+        await ctx.replyWithPhoto(
+          imageUrl,
+          {
+            caption: "🎨 Tayyor!",
+
+            reply_markup:
+              mainMenuKeyboard,
+          }
+        );
+
+        user.mode = "ai";
+
+        await user.save();
+      } catch (error) {
+        await ctx.api
+          .deleteMessage(
+            ctx.chat.id,
+            wait.message_id
+          )
+          .catch(() => {});
+
+        await ctx.reply(
+          `❌ ${error.message}`,
+
+          {
+            reply_markup:
+              mainMenuKeyboard,
+          }
+        );
+      }
+
+      return;
+    }
+
+    /* =================================================
+       NORMAL AI CHAT
+    ================================================= */
 
     const waitMessage =
       await ctx.reply(
-        `🤖 ${
-          AI_NAMES[
-            currentProvider
-          ] || "AI"
-        } ishlamoqda...`
+        `🤖 ${getProviderName(
+          user.aiProvider || "auto"
+        )} ishlayapti...`
       );
 
     await Memory.create({
@@ -695,11 +769,11 @@ export async function chatHandler(ctx) {
         );
 
     const messages =
-      history.map((message) => ({
-        role:
-          message.role,
+      history.map((memory) => ({
+        role: memory.role,
+
         content:
-          message.content,
+          memory.content,
       }));
 
     let answer = "";
@@ -708,8 +782,11 @@ export async function chatHandler(ctx) {
       answer =
         await queryAI(
           messages,
+
           lang,
-          currentProvider
+
+          user.aiProvider ||
+            "auto"
         );
     } catch (error) {
       logger.error(
@@ -729,17 +806,10 @@ export async function chatHandler(ctx) {
       !answer.trim()
     ) {
       await ctx.reply(
-        `❌ ${
-          AI_NAMES[
-            currentProvider
-          ] || "AI"
-        } javob bera olmadi.\n\n` +
-          `Agar **Auto** rejimini tanlasangiz, ` +
-          `ishlamayotgan AI'dan keyingisiga avtomatik o'tadi.`,
+        "❌ Tanlangan AI javob bermadi.\n\n" +
+          "🤖 AI Chat tugmasini bosib boshqa AI tanlang.",
 
         {
-          parse_mode:
-            "Markdown",
           reply_markup:
             mainMenuKeyboard,
         }
@@ -759,7 +829,6 @@ export async function chatHandler(ctx) {
 
     await ctx.reply(
       answer,
-
       {
         reply_markup:
           mainMenuKeyboard,
@@ -770,13 +839,14 @@ export async function chatHandler(ctx) {
       `Chat handler error: ${error.message}`
     );
 
-    await ctx.reply(
-      "🙏 Uzr, kutilmagan nosozlik yuz berdi.",
-
-      {
-        reply_markup:
-          mainMenuKeyboard,
-      }
-    ).catch(() => {});
+    await ctx
+      .reply(
+        "🙏 Kutilmagan nosozlik yuz berdi.",
+        {
+          reply_markup:
+            mainMenuKeyboard,
+        }
+      )
+      .catch(() => {});
   }
 }
